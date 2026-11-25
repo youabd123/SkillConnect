@@ -96,6 +96,61 @@ public sealed class ProviderServiceEndpointTests
         Assert.Equal(edit.description, details?.Description);
     }
 
+    [Fact]
+    public async Task OnlyOwnersManageTimesAndVisitorsSeeUpcomingTimesOnPublishedServices()
+    {
+        using var factory = new TestFactory();
+        using var visitor = factory.CreateAccountClient();
+        using var customer = factory.CreateAccountClient();
+        using var owner = factory.CreateAccountClient();
+        using var otherProvider = factory.CreateAccountClient();
+        await SignInAsync(factory, customer, "customer@example.test", AccountRole.Customer);
+        await SignInAsync(factory, owner, "owner@example.test", AccountRole.Provider);
+        await SignInAsync(factory, otherProvider, "other@example.test", AccountRole.Provider);
+
+        using var created = await owner.PostAsJsonAsync(ServicesPath,
+            new { name = "Garden care", description = "Seasonal care", category = "Gardening" });
+        var listing = await created.Content.ReadFromJsonAsync<ProviderService>();
+        Assert.NotNull(listing);
+        var managePath = $"{ServicesPath}/{listing.Id}/availability";
+        var publicPath = $"/api/services/{listing.Id}/availability";
+        var now = factory.Clock.UtcNow;
+        var startsAt = now.AddDays(1).ToOffset(TimeSpan.FromHours(2));
+        var input = new { startsAt, endsAt = startsAt.AddHours(1) };
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await visitor.PostAsJsonAsync(managePath, input)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await customer.PostAsJsonAsync(managePath, input)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherProvider.GetAsync(managePath)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherProvider.PostAsJsonAsync(managePath, input)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsJsonAsync(managePath,
+            new { startsAt = now.AddSeconds(-1), endsAt = now.AddHours(1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsJsonAsync(managePath,
+            new { startsAt, endsAt = startsAt })).StatusCode);
+
+        using var slotResponse = await owner.PostAsJsonAsync(managePath, input);
+        Assert.Equal(HttpStatusCode.Created, slotResponse.StatusCode);
+        var slot = await slotResponse.Content.ReadFromJsonAsync<AvailableTime>();
+        Assert.NotNull(slot);
+        Assert.Equal(startsAt.ToUniversalTime(), slot.StartsAt);
+        Assert.Equal(TimeSpan.Zero, slot.StartsAt.Offset);
+        Assert.Equal(slot, Assert.Single((await owner.GetFromJsonAsync<AvailableTime[]>(managePath))!));
+        Assert.Equal(HttpStatusCode.NotFound, (await visitor.GetAsync(publicPath)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await owner.PutAsync($"{ServicesPath}/{listing.Id}/publication", null)).StatusCode);
+        Assert.Equal(slot, Assert.Single((await visitor.GetFromJsonAsync<AvailableTime[]>(publicPath))!));
+
+        using var laterResponse = await owner.PostAsJsonAsync(managePath,
+            new { startsAt = now.AddDays(2), endsAt = now.AddDays(2).AddHours(1) });
+        var later = await laterResponse.Content.ReadFromJsonAsync<AvailableTime>();
+        Assert.NotNull(later);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherProvider.DeleteAsync($"{managePath}/{later.Id}")).StatusCode);
+
+        factory.Clock.UtcNow = now.AddDays(1);
+        Assert.Equal(later, Assert.Single((await visitor.GetFromJsonAsync<AvailableTime[]>(publicPath))!));
+        Assert.Equal(HttpStatusCode.NotFound, (await owner.DeleteAsync($"{managePath}/{slot.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"{managePath}/{later.Id}")).StatusCode);
+        Assert.Empty((await visitor.GetFromJsonAsync<AvailableTime[]>(publicPath))!);
+    }
+
     private static async Task<Guid> SignInAsync(TestFactory factory, HttpClient client, string email, AccountRole role)
     {
         await using var scope = factory.Services.CreateAsyncScope();
@@ -117,6 +172,7 @@ public sealed class ProviderServiceEndpointTests
     private sealed class TestFactory : WebApplicationFactory<Program>
     {
         private readonly string databaseName = Guid.NewGuid().ToString();
+        public TestClock Clock { get; } = new();
 
         protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
         {
@@ -124,6 +180,8 @@ public sealed class ProviderServiceEndpointTests
             {
                 services.RemoveAll<IDbContextOptionsConfiguration<SkillConnectDbContext>>();
                 services.AddDbContext<SkillConnectDbContext>(options => options.UseInMemoryDatabase(databaseName));
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(Clock);
             });
         }
 
@@ -132,5 +190,12 @@ public sealed class ProviderServiceEndpointTests
             BaseAddress = new Uri("https://localhost"),
             AllowAutoRedirect = false,
         });
+    }
+
+    private sealed class TestClock : TimeProvider
+    {
+        public DateTimeOffset UtcNow { get; set; } = new(2030, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
+        public override DateTimeOffset GetUtcNow() => UtcNow;
     }
 }

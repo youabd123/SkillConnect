@@ -31,6 +31,7 @@ public static class ProviderServiceEndpoints
         services.MapPost("", CreateAsync);
         services.MapPut("/{id:guid}", UpdateAsync);
         services.MapPut("/{id:guid}/publication", PublishAsync);
+        services.MapProviderAvailability();
     }
 
     private static async Task<IResult> ListAsync(
@@ -70,7 +71,7 @@ public static class ProviderServiceEndpoints
         return service is null ? Results.NotFound() : Results.Ok(service);
     }
 
-    private static Guid GetProviderId(ClaimsPrincipal user) =>
+    internal static Guid GetProviderId(ClaimsPrincipal user) =>
         Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private static IResult InvalidService() => Results.BadRequest(new
