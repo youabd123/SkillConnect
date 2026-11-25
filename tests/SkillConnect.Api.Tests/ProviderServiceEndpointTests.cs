@@ -53,6 +53,49 @@ public sealed class ProviderServiceEndpointTests
         Assert.Equal(providerId, listing.ProviderId);
     }
 
+    [Fact]
+    public async Task OnlyTheOwnerCanListEditAndPublishTheirService()
+    {
+        using var factory = new TestFactory();
+        using var visitor = factory.CreateAccountClient();
+        using var customer = factory.CreateAccountClient();
+        using var owner = factory.CreateAccountClient();
+        using var otherProvider = factory.CreateAccountClient();
+        await SignInAsync(factory, customer, "customer@example.test", AccountRole.Customer);
+        await SignInAsync(factory, owner, "owner@example.test", AccountRole.Provider);
+        await SignInAsync(factory, otherProvider, "other@example.test", AccountRole.Provider);
+
+        using var response = await owner.PostAsJsonAsync(ServicesPath,
+            new { name = "Draft name", description = "Draft description", category = "Gardening" });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var draft = await response.Content.ReadFromJsonAsync<ProviderService>();
+        Assert.NotNull(draft);
+        var editPath = $"{ServicesPath}/{draft.Id}";
+        var publishPath = $"{editPath}/publication";
+        var edit = new { name = "Garden care", description = "Updated description", category = "Gardening" };
+
+        Assert.Equal(draft, Assert.Single((await owner.GetFromJsonAsync<ProviderService[]>(ServicesPath))!));
+        Assert.Empty((await otherProvider.GetFromJsonAsync<ProviderService[]>(ServicesPath))!);
+        Assert.Equal(HttpStatusCode.Forbidden, (await customer.GetAsync(ServicesPath)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await customer.PutAsJsonAsync(editPath, edit)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await customer.PutAsync(publishPath, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherProvider.PutAsJsonAsync(editPath, edit)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherProvider.PutAsync(publishPath, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync(editPath, edit)).StatusCode);
+        Assert.Empty((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!);
+
+        using var published = await owner.PutAsync(publishPath, null);
+        Assert.Equal(HttpStatusCode.OK, published.StatusCode);
+        Assert.True((await published.Content.ReadFromJsonAsync<ProviderService>())!.IsPublished);
+        Assert.Equal(HttpStatusCode.OK, (await owner.PutAsync(publishPath, null)).StatusCode);
+
+        var publicListing = Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!);
+        Assert.Equal(draft.Id, publicListing.Id);
+        Assert.Equal(edit.name, publicListing.Name);
+        var details = await visitor.GetFromJsonAsync<ServiceDetails>($"/api/services/{draft.Id}");
+        Assert.Equal(edit.description, details?.Description);
+    }
+
     private static async Task<Guid> SignInAsync(TestFactory factory, HttpClient client, string email, AccountRole role)
     {
         await using var scope = factory.Services.CreateAsyncScope();

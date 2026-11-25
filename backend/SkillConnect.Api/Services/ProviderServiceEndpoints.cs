@@ -27,8 +27,15 @@ public static class ProviderServiceEndpoints
     public static void MapProviderServices(this WebApplication app)
     {
         var services = app.MapGroup("/api/provider/services").RequireAuthorization(ProviderPolicy);
+        services.MapGet("", ListAsync);
         services.MapPost("", CreateAsync);
+        services.MapPut("/{id:guid}", UpdateAsync);
+        services.MapPut("/{id:guid}/publication", PublishAsync);
     }
+
+    private static async Task<IResult> ListAsync(
+        ClaimsPrincipal user, ManageProviderServices services, CancellationToken cancellationToken) =>
+        Results.Ok(await services.ListAsync(GetProviderId(user), cancellationToken));
 
     private static async Task<IResult> CreateAsync(
         ServiceInput input, ClaimsPrincipal user, ManageProviderServices services, CancellationToken cancellationToken)
@@ -41,6 +48,26 @@ public static class ProviderServiceEndpoints
         var service = await services.CreateAsync(GetProviderId(user),
             input.Name!, input.Description!, input.Category!, cancellationToken);
         return Results.Created((string?)null, service);
+    }
+
+    private static async Task<IResult> UpdateAsync(
+        Guid id, ServiceInput input, ClaimsPrincipal user, ManageProviderServices services, CancellationToken cancellationToken)
+    {
+        if (!input.IsValid())
+        {
+            return InvalidService();
+        }
+
+        var service = await services.UpdateAsync(GetProviderId(user), id,
+            input.Name!, input.Description!, input.Category!, cancellationToken);
+        return service is null ? Results.NotFound() : Results.Ok(service);
+    }
+
+    private static async Task<IResult> PublishAsync(
+        Guid id, ClaimsPrincipal user, ManageProviderServices services, CancellationToken cancellationToken)
+    {
+        var service = await services.PublishAsync(GetProviderId(user), id, cancellationToken);
+        return service is null ? Results.NotFound() : Results.Ok(service);
     }
 
     private static Guid GetProviderId(ClaimsPrincipal user) =>
