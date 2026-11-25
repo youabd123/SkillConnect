@@ -147,6 +147,7 @@ export default function AccountPage() {
       {session.status === 'signed-in' && (
         <>
           <p>{session.account.email} · {session.account.role === 'provider' ? 'Utförare' : 'Kund'}</p>
+          {session.account.role === 'provider' && <p><a href="/account/services">Mina tjänster</a></p>}
           <button type="button" disabled={pending} onClick={signOut}>Logga ut</button>
         </>
       )}

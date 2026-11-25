@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import AccountPage, { ConfirmEmailPage } from './AccountPage'
+import ProviderServicesPage from './ProviderServicesPage'
 import ServiceDetailsPage from './ServiceDetailsPage'
 
 function categorySearch(category: string) {
@@ -115,6 +116,7 @@ function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
 
 function App() {
   if (window.location.pathname === '/account') return <AccountPage />
+  if (window.location.pathname === '/account/services') return <ProviderServicesPage />
   if (window.location.pathname === '/confirm-email') return <ConfirmEmailPage />
 
   const category = new URLSearchParams(window.location.search).get('category')?.trim() ?? ''
