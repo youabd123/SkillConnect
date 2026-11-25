@@ -21,7 +21,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. The development server forwards `/api` requests to the API on port 5241. When serving the production frontend build, route `/api` to the backend on the same origin and serve the frontend's `index.html` for `/services/{id}` so direct links work.
+Open the local URL printed by Vite. The development server forwards `/api` requests to the API on port 5241. When serving the production frontend build, route `/api` to the backend on the same HTTPS origin and serve the frontend's `index.html` for `/services/{id}`, `/account` and `/confirm-email` so direct links work.
 
 Run `npm run lint` and `npm run build` from `frontend`, or `dotnet test backend/SkillConnect.sln` from the repository root.
 
@@ -48,3 +48,9 @@ dotnet ef database update --project backend/SkillConnect.Infrastructure
 ```
 
 The catalog starts empty on a new database. The health endpoint runs independently of SQL Server.
+
+### Account confirmation
+
+Run the database update before trying registration. In development, open **Mitt konto** in the browser, register, and use the confirmation link printed in the API terminal. The default link uses `http://localhost:5173`. If Vite uses another origin, set `Accounts__PublicOrigin` to that origin before starting the API.
+
+To send real email, configure `Accounts__PublicOrigin` with the public HTTPS frontend origin and set `Accounts__Smtp__Host`, `Accounts__Smtp__Port` (defaults to 587) and `Accounts__Smtp__From`. For an authenticated SMTP relay, also set `Accounts__Smtp__Username` and `Accounts__Smtp__Password`. The relay must support STARTTLS. Keep SMTP credentials in environment variables or a secret store.

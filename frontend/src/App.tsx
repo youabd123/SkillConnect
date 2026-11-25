@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import AccountPage, { ConfirmEmailPage } from './AccountPage'
 import ServiceDetailsPage from './ServiceDetailsPage'
 
 function categorySearch(category: string) {
@@ -86,6 +87,7 @@ function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
 
   return (
     <main>
+      <nav aria-label="Konto"><a href="/account">Mitt konto</a></nav>
       <h1>SkillConnect</h1>
       <form onSubmit={filterServices}>
         <label htmlFor="category">Kategori</label>
@@ -112,6 +114,9 @@ function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
 }
 
 function App() {
+  if (window.location.pathname === '/account') return <AccountPage />
+  if (window.location.pathname === '/confirm-email') return <ConfirmEmailPage />
+
   const category = new URLSearchParams(window.location.search).get('category')?.trim() ?? ''
   const serviceId = /^\/services\/([^/]+)\/?$/.exec(window.location.pathname)?.[1]
 
