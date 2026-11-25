@@ -153,6 +153,30 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SkillConnect.Domain.Services.AvailabilitySlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId", "StartsAt");
+
+                    b.ToTable("AvailabilitySlots", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AvailabilitySlots_EndsAfterStart", "[EndsAt] > [StartsAt]");
+                        });
+                });
+
             modelBuilder.Entity("SkillConnect.Domain.Services.ServiceListing", b =>
                 {
                     b.Property<Guid>("Id")
@@ -297,6 +321,15 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                     b.HasOne("SkillConnect.Infrastructure.Identity.SkillConnectUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SkillConnect.Domain.Services.AvailabilitySlot", b =>
+                {
+                    b.HasOne("SkillConnect.Domain.Services.ServiceListing", null)
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
