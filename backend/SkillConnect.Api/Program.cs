@@ -7,6 +7,7 @@ builder.Services.AddDbContext<SkillConnectDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SkillConnect")));
 builder.Services.AddScoped<IServiceCatalogReader, SqlServerServiceCatalogReader>();
 builder.Services.AddScoped<ListPublishedServices>();
+builder.Services.AddScoped<GetPublishedService>();
 
 var app = builder.Build();
 
@@ -16,6 +17,15 @@ app.MapGet("/api/services", async (
     ListPublishedServices listServices,
     CancellationToken cancellationToken) =>
     Results.Ok(await listServices.ExecuteAsync(category, cancellationToken)));
+
+app.MapGet("/api/services/{id:guid}", async (
+    Guid id,
+    GetPublishedService getService,
+    CancellationToken cancellationToken) =>
+{
+    var service = await getService.ExecuteAsync(id, cancellationToken);
+    return service is null ? Results.NotFound() : Results.Ok(service);
+});
 
 app.Run();
 

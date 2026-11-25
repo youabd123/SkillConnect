@@ -7,6 +7,13 @@ namespace SkillConnect.Infrastructure.Persistence;
 public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContext)
     : IServiceCatalogReader
 {
+    public Task<ServiceListing?> FindPublishedAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return dbContext.ServiceListings
+            .AsNoTracking()
+            .SingleOrDefaultAsync(service => service.Id == id && service.IsPublished, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ServiceListing>> ListPublishedAsync(
         string? category,
         CancellationToken cancellationToken)
