@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SkillConnect.Api.Accounts;
+using SkillConnect.Api.Services;
 using SkillConnect.Application.Services;
 using SkillConnect.Infrastructure.Persistence;
 
@@ -10,6 +11,7 @@ builder.Services.AddScoped<IServiceCatalogReader, SqlServerServiceCatalogReader>
 builder.Services.AddScoped<ListPublishedServices>();
 builder.Services.AddScoped<GetPublishedService>();
 builder.Services.AddSkillConnectAccounts(builder.Environment);
+builder.Services.AddProviderServices();
 
 var app = builder.Build();
 app.UseRateLimiter();
@@ -18,6 +20,7 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapSkillConnectAccounts();
+app.MapProviderServices();
 app.MapGet("/api/services", async (
     string? category,
     ListPublishedServices listServices,
