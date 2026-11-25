@@ -51,6 +51,8 @@ The catalog starts empty on a new database. The health endpoint runs independent
 
 To add a listing, sign in as a provider and open **Mina tjänster**. Create a draft, then publish it to make it visible in the public catalog.
 
+Use **Hantera tider** on a listing to add or remove individual upcoming slots. Visitors see upcoming slots on the details page once the listing is published. Times are displayed in the browser's local time zone.
+
 ### Account confirmation
 
 Run the database update before trying registration. In development, open **Mitt konto** in the browser, register, and use the confirmation link printed in the API terminal. The default link uses `http://localhost:5173`. If Vite uses another origin, set `Accounts__PublicOrigin` to that origin before starting the API.

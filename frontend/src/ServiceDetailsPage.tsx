@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import ServiceAvailability from './ServiceAvailability'
 
 type ServiceDetails = {
   name: string
@@ -61,6 +62,7 @@ export default function ServiceDetailsPage({ id, backHref }: { id: string; backH
           <h1>{result.service.name}</h1>
           <p>{result.service.category}</p>
           <p className="service-description">{result.service.description}</p>
+          <ServiceAvailability key={id} serviceId={id} />
         </article>
       )}
     </main>

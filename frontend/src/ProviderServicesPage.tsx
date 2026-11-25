@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import ServiceAvailability from './ServiceAvailability'
 
 type Service = {
   id: string
@@ -17,6 +18,7 @@ const servicesUrl = '/api/provider/services'
 export default function ProviderServicesPage() {
   const [page, setPage] = useState<PageState>({ status: 'loading' })
   const [editing, setEditing] = useState<Service | null>(null)
+  const [availabilityServiceId, setAvailabilityServiceId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState<{ error: boolean; text: string } | null>(null)
 
@@ -140,10 +142,15 @@ export default function ProviderServicesPage() {
                       setNotice(null)
                       setEditing(service)
                     }}>Redigera</button>
+                    <button type="button" className="secondary" aria-expanded={availabilityServiceId === service.id}
+                      onClick={() => setAvailabilityServiceId((current) => current === service.id ? null : service.id)}>
+                      {availabilityServiceId === service.id ? 'Dölj tider' : 'Hantera tider'}
+                    </button>
                     {service.isPublished
                       ? <a href={`/services/${service.id}`}>Visa i katalogen</a>
                       : <button type="button" disabled={pending || editing?.id === service.id} onClick={() => void publishService(service)}>Publicera</button>}
                   </div>
+                  {availabilityServiceId === service.id && <ServiceAvailability serviceId={service.id} managed />}
                 </li>
               ))}
             </ul>
