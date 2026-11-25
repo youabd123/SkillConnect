@@ -177,6 +177,27 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SkillConnect.Domain.Services.Booking", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("SlotId")
+                        .IsUnique();
+
+                    b.ToTable("Bookings");
+                });
+
             modelBuilder.Entity("SkillConnect.Domain.Services.ServiceListing", b =>
                 {
                     b.Property<Guid>("Id")
@@ -331,6 +352,21 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SkillConnect.Domain.Services.Booking", b =>
+                {
+                    b.HasOne("SkillConnect.Infrastructure.Identity.SkillConnectUser", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SkillConnect.Domain.Services.AvailabilitySlot", null)
+                        .WithOne()
+                        .HasForeignKey("SkillConnect.Domain.Services.Booking", "SlotId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

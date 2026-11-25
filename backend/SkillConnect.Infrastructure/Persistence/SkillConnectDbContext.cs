@@ -11,6 +11,7 @@ public sealed class SkillConnectDbContext(DbContextOptions<SkillConnectDbContext
 {
     public DbSet<ServiceListing> ServiceListings => Set<ServiceListing>();
     public DbSet<AvailabilitySlot> AvailabilitySlots => Set<AvailabilitySlot>();
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,5 +32,16 @@ public sealed class SkillConnectDbContext(DbContextOptions<SkillConnectDbContext
         availability.Property(slot => slot.EndsAt);
         availability.HasOne<ServiceListing>().WithMany().HasForeignKey(slot => slot.ServiceId);
         availability.HasIndex(slot => new { slot.ServiceId, slot.StartsAt });
+
+        var booking = modelBuilder.Entity<Booking>();
+        booking.HasKey(item => item.Id);
+        booking.Property(item => item.Id).ValueGeneratedNever();
+        booking.Property(item => item.SlotId);
+        booking.Property(item => item.CustomerId);
+        booking.HasIndex(item => item.SlotId).IsUnique();
+        booking.HasOne<AvailabilitySlot>().WithOne().HasForeignKey<Booking>(item => item.SlotId)
+            .OnDelete(DeleteBehavior.Restrict);
+        booking.HasOne<SkillConnectUser>().WithMany().HasForeignKey(item => item.CustomerId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
