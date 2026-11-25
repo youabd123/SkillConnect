@@ -39,7 +39,9 @@ public static class AccountEndpoints
             };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AccountAccess.CustomerPolicy, policy => policy.RequireAccountRole(AccountRole.Customer))
+            .AddPolicy(AccountAccess.ProviderPolicy, policy => policy.RequireAccountRole(AccountRole.Provider));
         services.AddScoped<IConfirmationEmailSender, ConfirmationEmailSender>();
         services.AddRateLimiter(options =>
         {

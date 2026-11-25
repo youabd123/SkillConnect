@@ -1,27 +1,16 @@
 using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
 using SkillConnect.Application.Services;
-using SkillConnect.Infrastructure.Identity;
 using SkillConnect.Infrastructure.Persistence;
+using static SkillConnect.Api.Accounts.AccountAccess;
 
 namespace SkillConnect.Api.Services;
 
 public static class ProviderServiceEndpoints
 {
-    private const string ProviderPolicy = "Provider";
-
     public static void AddProviderServices(this IServiceCollection services)
     {
         services.AddScoped<IProviderServiceStore, SqlServerProviderServiceStore>();
         services.AddScoped<ManageProviderServices>();
-        services.AddAuthorizationBuilder().AddPolicy(ProviderPolicy, policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.RequireAssertion(async context =>
-                context.Resource is HttpContext httpContext &&
-                await httpContext.RequestServices.GetRequiredService<UserManager<SkillConnectUser>>()
-                    .GetUserAsync(context.User) is { AccountRole: AccountRole.Provider });
-        });
     }
 
     public static void MapProviderServices(this WebApplication app)
@@ -36,7 +25,7 @@ public static class ProviderServiceEndpoints
 
     private static async Task<IResult> ListAsync(
         ClaimsPrincipal user, ManageProviderServices services, CancellationToken cancellationToken) =>
-        Results.Ok(await services.ListAsync(GetProviderId(user), cancellationToken));
+        Results.Ok(await services.ListAsync(GetAccountId(user), cancellationToken));
 
     private static async Task<IResult> CreateAsync(
         ServiceInput input, ClaimsPrincipal user, ManageProviderServices services, CancellationToken cancellationToken)
@@ -46,7 +35,7 @@ public static class ProviderServiceEndpoints
             return InvalidService();
         }
 
-        var service = await services.CreateAsync(GetProviderId(user),
+        var service = await services.CreateAsync(GetAccountId(user),
             input.Name!, input.Description!, input.Category!, cancellationToken);
         return Results.Created((string?)null, service);
     }
@@ -59,7 +48,7 @@ public static class ProviderServiceEndpoints
             return InvalidService();
         }
 
-        var service = await services.UpdateAsync(GetProviderId(user), id,
+        var service = await services.UpdateAsync(GetAccountId(user), id,
             input.Name!, input.Description!, input.Category!, cancellationToken);
         return service is null ? Results.NotFound() : Results.Ok(service);
     }
@@ -67,12 +56,9 @@ public static class ProviderServiceEndpoints
     private static async Task<IResult> PublishAsync(
         Guid id, ClaimsPrincipal user, ManageProviderServices services, CancellationToken cancellationToken)
     {
-        var service = await services.PublishAsync(GetProviderId(user), id, cancellationToken);
+        var service = await services.PublishAsync(GetAccountId(user), id, cancellationToken);
         return service is null ? Results.NotFound() : Results.Ok(service);
     }
-
-    internal static Guid GetProviderId(ClaimsPrincipal user) =>
-        Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private static IResult InvalidService() => Results.BadRequest(new
     {

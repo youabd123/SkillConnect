@@ -151,6 +151,54 @@ public sealed class ProviderServiceEndpointTests
         Assert.Empty((await visitor.GetFromJsonAsync<AvailableTime[]>(publicPath))!);
     }
 
+    [Fact]
+    public async Task BookingsAreVisibleOnlyToTheCustomerAndServiceOwner()
+    {
+        using var factory = new TestFactory();
+        using var visitor = factory.CreateAccountClient();
+        using var owner = factory.CreateAccountClient();
+        using var otherProvider = factory.CreateAccountClient();
+        using var customer = factory.CreateAccountClient();
+        using var otherCustomer = factory.CreateAccountClient();
+        await SignInAsync(factory, owner, "owner@example.test", AccountRole.Provider);
+        await SignInAsync(factory, otherProvider, "other-provider@example.test", AccountRole.Provider);
+        await SignInAsync(factory, customer, "customer@example.test", AccountRole.Customer);
+        await SignInAsync(factory, otherCustomer, "other-customer@example.test", AccountRole.Customer);
+
+        using var created = await owner.PostAsJsonAsync(ServicesPath,
+            new { name = "Garden care", description = "Seasonal care", category = "Gardening" });
+        var listing = await created.Content.ReadFromJsonAsync<ProviderService>();
+        Assert.NotNull(listing);
+        var availabilityPath = $"{ServicesPath}/{listing.Id}/availability";
+        var startsAt = factory.Clock.UtcNow.AddDays(1);
+        using var timeCreated = await owner.PostAsJsonAsync(availabilityPath,
+            new { startsAt, endsAt = startsAt.AddHours(1) });
+        var time = await timeCreated.Content.ReadFromJsonAsync<AvailableTime>();
+        Assert.NotNull(time);
+        var publicAvailabilityPath = $"/api/services/{listing.Id}/availability";
+        var bookingPath = $"{publicAvailabilityPath}/{time.Id}/booking";
+
+        Assert.Equal(HttpStatusCode.Conflict, (await customer.PostAsJsonAsync(bookingPath, new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await owner.PutAsync($"{ServicesPath}/{listing.Id}/publication", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await visitor.PostAsJsonAsync(bookingPath, new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await owner.PostAsJsonAsync(bookingPath, new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, (await customer.PostAsync(bookingPath, null)).StatusCode);
+
+        using var booked = await customer.PostAsJsonAsync(bookingPath, new { });
+        Assert.Equal(HttpStatusCode.Created, booked.StatusCode);
+        var booking = await booked.Content.ReadFromJsonAsync<BookingSummary>();
+        Assert.NotNull(booking);
+        Assert.Equal(listing.Id, booking.ServiceId);
+        Assert.Equal(time.StartsAt, booking.StartsAt);
+        Assert.Equal(HttpStatusCode.Conflict, (await otherCustomer.PostAsJsonAsync(bookingPath, new { })).StatusCode);
+        Assert.Empty((await visitor.GetFromJsonAsync<AvailableTime[]>(publicAvailabilityPath))!);
+        Assert.Equal(HttpStatusCode.NotFound, (await owner.DeleteAsync($"{availabilityPath}/{time.Id}")).StatusCode);
+        Assert.Equal(booking, Assert.Single((await customer.GetFromJsonAsync<BookingSummary[]>("/api/accounts/bookings"))!));
+        Assert.Equal(booking, Assert.Single((await owner.GetFromJsonAsync<BookingSummary[]>("/api/provider/bookings"))!));
+        Assert.Empty((await otherCustomer.GetFromJsonAsync<BookingSummary[]>("/api/accounts/bookings"))!);
+        Assert.Empty((await otherProvider.GetFromJsonAsync<BookingSummary[]>("/api/provider/bookings"))!);
+    }
+
     private static async Task<Guid> SignInAsync(TestFactory factory, HttpClient client, string email, AccountRole role)
     {
         await using var scope = factory.Services.CreateAsyncScope();

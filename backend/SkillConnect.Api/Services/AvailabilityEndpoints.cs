@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using SkillConnect.Application.Services;
 using SkillConnect.Infrastructure.Persistence;
-using static SkillConnect.Api.Services.ProviderServiceEndpoints;
+using static SkillConnect.Api.Accounts.AccountAccess;
 
 namespace SkillConnect.Api.Services;
 
@@ -28,7 +28,7 @@ public static class AvailabilityEndpoints
     private static async Task<IResult> ListForProviderAsync(
         Guid serviceId, ClaimsPrincipal user, ManageAvailability availability, CancellationToken cancellationToken)
     {
-        var times = await availability.ListForProviderAsync(serviceId, GetProviderId(user), cancellationToken);
+        var times = await availability.ListForProviderAsync(serviceId, GetAccountId(user), cancellationToken);
         return times is null ? Results.NotFound() : Results.Ok(times);
     }
 
@@ -48,7 +48,7 @@ public static class AvailabilityEndpoints
             return InvalidTime();
         }
 
-        var result = await availability.CreateAsync(serviceId, GetProviderId(user), startsAt, endsAt, cancellationToken);
+        var result = await availability.CreateAsync(serviceId, GetAccountId(user), startsAt, endsAt, cancellationToken);
         return result.Status switch
         {
             AvailabilityCreationStatus.Created => Results.Created((string?)null, result.Time),
@@ -60,7 +60,7 @@ public static class AvailabilityEndpoints
     private static async Task<IResult> RemoveAsync(
         Guid serviceId, Guid slotId, ClaimsPrincipal user, ManageAvailability availability, CancellationToken cancellationToken)
     {
-        return await availability.RemoveAsync(serviceId, GetProviderId(user), slotId, cancellationToken)
+        return await availability.RemoveAsync(serviceId, GetAccountId(user), slotId, cancellationToken)
             ? Results.NoContent()
             : Results.NotFound();
     }

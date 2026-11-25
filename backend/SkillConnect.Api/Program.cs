@@ -13,6 +13,7 @@ builder.Services.AddScoped<GetPublishedService>();
 builder.Services.AddSkillConnectAccounts(builder.Environment);
 builder.Services.AddProviderServices();
 builder.Services.AddServiceAvailability();
+builder.Services.AddServiceBookings();
 
 var app = builder.Build();
 app.UseRateLimiter();
@@ -23,6 +24,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapSkillConnectAccounts();
 app.MapProviderServices();
 app.MapPublicAvailability();
+app.MapServiceBookings();
 app.MapGet("/api/services", async (
     string? category,
     ListPublishedServices listServices,
