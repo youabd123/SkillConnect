@@ -7,7 +7,7 @@ SkillConnect är en marknadsplats för tjänster. En utförare publicerar en tj�
 | ID | Krav |
 | --- | --- |
 | K1 | Besökare kan bläddra bland publicerade tjänster, filtrera på kategori och öppna en tjänsts detaljsida. |
-| K2 | Kunder och utförare kan registrera sig och logga in. Endast inloggade kunder kan boka och endast inloggade utförare kan publicera tjänster och lägga upp tider. |
+| K2 | Användaren registrerar sig med e-postadress och lösenord och väljer Kund eller Utförare. E-postadressen måste bekräftas innan användaren kan logga in. Endast inloggade kunder kan boka och endast inloggade utförare kan publicera tjänster och lägga upp tider. |
 | K3 | Utförare kan skapa, redigera och publicera egna tjänster. En tjänst har ett namn, en beskrivning och en kategori. |
 | K4 | Utförare kan lägga upp enskilda lediga tider för sina egna tjänster. Varje tid har datum, starttid och sluttid. Sluttiden måste ligga efter starttiden. |
 | K5 | Tjänstens detaljsida visar kommande lediga tider. Kunden kan välja och boka en tid på en publicerad tjänst. |
@@ -24,7 +24,7 @@ SkillConnect är en marknadsplats för tjänster. En utförare publicerar en tj�
 ## Öppna beslut och avgränsningar
 
 - Regler för avbokning, ombokning och överlappande tider mellan en utförares tjänster behöver beslutas innan de implementeras.
-- Betalning, chatt, recensioner och återkommande tider ligger utanför första versionen.
+- Betalning, chatt, recensioner, återkommande tider, tvåstegsverifiering och återställning av glömt lösenord ligger utanför första versionen.
 
 ## Teknik
 
