@@ -21,7 +21,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. The development server forwards `/api` requests to the API on port 5241. When serving the production frontend build, route `/api` to the backend on the same origin.
+Open the local URL printed by Vite. The development server forwards `/api` requests to the API on port 5241. When serving the production frontend build, route `/api` to the backend on the same origin and serve the frontend's `index.html` for `/services/{id}` so direct links work.
 
 Run `npm run lint` and `npm run build` from `frontend`, or `dotnet test backend/SkillConnect.sln` from the repository root.
 

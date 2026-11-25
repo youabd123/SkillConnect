@@ -1,4 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import ServiceDetailsPage from './ServiceDetailsPage'
+
+function categorySearch(category: string) {
+  return category ? `?${new URLSearchParams({ category })}` : ''
+}
 
 type ServiceSummary = {
   id: string
@@ -16,7 +21,7 @@ function ServiceResults({ category }: { category: string }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    const search = category ? `?${new URLSearchParams({ category })}` : ''
+    const search = categorySearch(category)
 
     async function loadServices() {
       try {
@@ -56,7 +61,7 @@ function ServiceResults({ category }: { category: string }) {
     <ul className="services">
       {result.services.map((service) => (
         <li key={service.id}>
-          <h2>{service.name}</h2>
+          <h2><a href={`/services/${service.id}${categorySearch(category)}`}>{service.name}</a></h2>
           <p>{service.category}</p>
         </li>
       ))}
@@ -64,13 +69,19 @@ function ServiceResults({ category }: { category: string }) {
   )
 }
 
-function App() {
-  const [categoryInput, setCategoryInput] = useState('')
-  const [category, setCategory] = useState('')
+function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
+  const [categoryInput, setCategoryInput] = useState(initialCategory)
+  const [category, setCategory] = useState(initialCategory)
+
+  function applyCategory(value: string) {
+    const category = value.trim()
+    window.history.replaceState(null, '', `/${categorySearch(category)}`)
+    setCategory(category)
+  }
 
   function filterServices(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setCategory(categoryInput.trim())
+    applyCategory(categoryInput)
   }
 
   return (
@@ -88,7 +99,7 @@ function App() {
           {category && (
             <button type="button" className="secondary" onClick={() => {
               setCategoryInput('')
-              setCategory('')
+              applyCategory('')
             }}>
               Visa alla
             </button>
@@ -98,6 +109,15 @@ function App() {
       <ServiceResults key={category} category={category} />
     </main>
   )
+}
+
+function App() {
+  const category = new URLSearchParams(window.location.search).get('category')?.trim() ?? ''
+  const serviceId = /^\/services\/([^/]+)\/?$/.exec(window.location.pathname)?.[1]
+
+  return serviceId
+    ? <ServiceDetailsPage id={serviceId} backHref={`/${categorySearch(category)}`} />
+    : <ServiceCatalog initialCategory={category} />
 }
 
 export default App

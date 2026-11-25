@@ -69,3 +69,12 @@ button.secondary {
 .services p {
   margin: 0;
 }
+
+a {
+  color: #205740;
+}
+
+.service-description {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
