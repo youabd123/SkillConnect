@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../SkillConnect.Infrastructure/SkillConnect.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
