@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import AccountBookings from './AccountBookings'
 
 type Account = { email: string; role: 'customer' | 'provider' }
 type Session = { status: 'loading' | 'signed-out' | 'error' } | { status: 'signed-in'; account: Account }
@@ -149,6 +150,7 @@ export default function AccountPage() {
           <p>{session.account.email} · {session.account.role === 'provider' ? 'Utförare' : 'Kund'}</p>
           {session.account.role === 'provider' && <p><a href="/account/services">Mina tjänster</a></p>}
           <button type="button" disabled={pending} onClick={signOut}>Logga ut</button>
+          <AccountBookings key={session.account.email} role={session.account.role} />
         </>
       )}
       {session.status === 'signed-out' && (

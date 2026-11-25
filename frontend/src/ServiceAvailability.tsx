@@ -1,14 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { bookingTimeZone, formatBookingTime } from './bookingTimes'
 
 type AvailableTime = { id: string; startsAt: string; endsAt: string }
 type AvailabilityState =
   | { status: 'loading' | 'error' }
   | { status: 'ready'; times: AvailableTime[] }
-
-const localDateTime = new Intl.DateTimeFormat('sv-SE', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
 
 function parseLocalTime(value: string) {
   const date = new Date(value)
@@ -23,7 +19,7 @@ export default function ServiceAvailability({ serviceId, managed = false }: { se
   const url = `/api/${managed ? 'provider/' : ''}services/${encodeURIComponent(serviceId)}/availability`
   const [state, setState] = useState<AvailabilityState>({ status: 'loading' })
   const [pending, setPending] = useState(false)
-  const [notice, setNotice] = useState<{ error: boolean; text: string } | null>(null)
+  const [notice, setNotice] = useState<{ error: boolean; text: string; showAccountLink?: boolean } | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -89,15 +85,56 @@ export default function ServiceAvailability({ serviceId, managed = false }: { se
       const response = await fetch(`${url}/${encodeURIComponent(timeId)}`, { method: 'DELETE' })
       if (!response.ok && response.status !== 404) throw new Error('Availability removal failed')
 
-      setState((current) => current.status === 'ready'
-        ? { status: 'ready', times: current.times.filter((time) => time.id !== timeId) }
-        : current)
+      hideTime(timeId)
       setNotice({
         error: false,
         text: response.status === 404 ? 'Tiden är inte längre tillgänglig.' : 'Tiden är borttagen.',
       })
     } catch {
       setNotice({ error: true, text: 'Tiden kunde inte tas bort. Försök igen.' })
+    } finally {
+      setPending(false)
+    }
+  }
+
+  function hideTime(timeId: string) {
+    setState((current) => current.status === 'ready'
+      ? { status: 'ready', times: current.times.filter((time) => time.id !== timeId) }
+      : current)
+  }
+
+  async function bookTime(time: AvailableTime) {
+    setPending(true)
+    setNotice(null)
+    try {
+      const response = await fetch(`${url}/${encodeURIComponent(time.id)}/booking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+      if (response.status === 401) {
+        setNotice({ error: true, text: 'Logga in som kund för att boka en tid.', showAccountLink: true })
+        return
+      }
+      if (response.status === 403) {
+        setNotice({ error: true, text: 'Du behöver ett kundkonto för att boka en tid.' })
+        return
+      }
+      if (response.status === 409) {
+        hideTime(time.id)
+        setNotice({ error: true, text: 'Tiden är inte längre ledig. Välj en annan tid om någon finns.' })
+        return
+      }
+      if (!response.ok) throw new Error('Booking failed')
+
+      hideTime(time.id)
+      setNotice({
+        error: false,
+        text: `Bokningen är bekräftad. ${formatBookingTime(time.startsAt, time.endsAt)}.`,
+        showAccountLink: true,
+      })
+    } catch {
+      setNotice({ error: true, text: 'Bokningen kunde inte bekräftas. Kontrollera Mina bokningar innan du försöker igen.', showAccountLink: true })
     } finally {
       setPending(false)
     }
@@ -110,9 +147,13 @@ export default function ServiceAvailability({ serviceId, managed = false }: { se
       {state.status === 'error' && <p role="alert">Tiderna kunde inte hämtas. Försök igen senare.</p>}
       {state.status === 'ready' && (
         <>
-          {notice && <p role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
+          {notice && (
+            <p role={notice.error ? 'alert' : 'status'}>
+              {notice.text} {notice.showAccountLink && <a href="/account">Till kontot</a>}
+            </p>
+          )}
           {(managed || state.times.length > 0) && (
-            <p>Tidszon: {localDateTime.resolvedOptions().timeZone}</p>
+            <p>Tidszon: {bookingTimeZone}</p>
           )}
           {managed && (
             <form onSubmit={addTime}>
@@ -128,14 +169,19 @@ export default function ServiceAvailability({ serviceId, managed = false }: { se
           {state.times.length === 0 ? <p>Inga kommande lediga tider.</p> : (
             <ul className="availability-times">
               {state.times.map((time) => {
-                const label = localDateTime.formatRange(new Date(time.startsAt), new Date(time.endsAt))
+                const label = formatBookingTime(time.startsAt, time.endsAt)
                 return (
                   <li key={time.id}>
                     <span>{label}</span>
-                    {managed && (
+                    {managed ? (
                       <button type="button" className="secondary" disabled={pending}
                         aria-label={`Ta bort tid ${label}`} onClick={() => void removeTime(time.id)}>
                         Ta bort
+                      </button>
+                    ) : (
+                      <button type="button" disabled={pending} aria-label={`Boka ${label}`}
+                        onClick={() => void bookTime(time)}>
+                        Boka
                       </button>
                     )}
                   </li>
