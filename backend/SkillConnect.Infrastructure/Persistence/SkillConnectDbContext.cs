@@ -30,6 +30,7 @@ public sealed class SkillConnectDbContext(DbContextOptions<SkillConnectDbContext
         availability.Property(slot => slot.ServiceId);
         availability.Property(slot => slot.StartsAt);
         availability.Property(slot => slot.EndsAt);
+        availability.Property(slot => slot.Revision).IsConcurrencyToken();
         availability.HasOne<ServiceListing>().WithMany().HasForeignKey(slot => slot.ServiceId);
         availability.HasIndex(slot => new { slot.ServiceId, slot.StartsAt });
 
@@ -38,8 +39,9 @@ public sealed class SkillConnectDbContext(DbContextOptions<SkillConnectDbContext
         booking.Property(item => item.Id).ValueGeneratedNever();
         booking.Property(item => item.SlotId);
         booking.Property(item => item.CustomerId);
-        booking.HasIndex(item => item.SlotId).IsUnique();
-        booking.HasOne<AvailabilitySlot>().WithOne().HasForeignKey<Booking>(item => item.SlotId)
+        booking.Property(item => item.IsCancelled).IsConcurrencyToken();
+        booking.HasIndex(item => item.SlotId).IsUnique().HasFilter("[IsCancelled] = 0");
+        booking.HasOne<AvailabilitySlot>().WithMany().HasForeignKey(item => item.SlotId)
             .OnDelete(DeleteBehavior.Restrict);
         booking.HasOne<SkillConnectUser>().WithMany().HasForeignKey(item => item.CustomerId)
             .OnDelete(DeleteBehavior.Restrict);

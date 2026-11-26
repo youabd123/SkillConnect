@@ -161,6 +161,13 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("EndsAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("IsWithdrawn")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
 
@@ -185,6 +192,10 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsCancelled")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bit");
+
                     b.Property<Guid>("SlotId")
                         .HasColumnType("uniqueidentifier");
 
@@ -193,7 +204,8 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("SlotId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsCancelled] = 0");
 
                     b.ToTable("Bookings");
                 });
@@ -364,8 +376,8 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("SkillConnect.Domain.Services.AvailabilitySlot", null)
-                        .WithOne()
-                        .HasForeignKey("SkillConnect.Domain.Services.Booking", "SlotId")
+                        .WithMany()
+                        .HasForeignKey("SlotId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

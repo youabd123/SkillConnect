@@ -14,6 +14,16 @@ public sealed class AvailabilitySlot
     public Guid ServiceId { get; }
     public DateTimeOffset StartsAt { get; }
     public DateTimeOffset EndsAt { get; }
+    public bool IsWithdrawn { get; private set; }
+    public Guid Revision { get; private set; }
+
+    public void RecordBooking() => Revision = Guid.NewGuid();
+
+    public void Withdraw()
+    {
+        IsWithdrawn = true;
+        Revision = Guid.NewGuid();
+    }
 
     public static AvailabilitySlot? Create(
         Guid serviceId, DateTimeOffset startsAt, DateTimeOffset endsAt, DateTimeOffset now)
