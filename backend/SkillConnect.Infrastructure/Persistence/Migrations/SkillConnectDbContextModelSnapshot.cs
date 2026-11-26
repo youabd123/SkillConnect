@@ -250,6 +250,10 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                     b.Property<int>("AccountRole")
                         .HasColumnType("int");
 
+                    b.Property<string>("BusinessName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");

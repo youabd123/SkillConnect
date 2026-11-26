@@ -5,6 +5,7 @@ namespace SkillConnect.Infrastructure.Identity;
 public sealed class SkillConnectUser : IdentityUser<Guid>
 {
     public AccountRole AccountRole { get; init; }
+    public string? BusinessName { get; set; }
 }
 
 public enum AccountRole
