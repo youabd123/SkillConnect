@@ -1,7 +1,20 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AccountPage, { ConfirmEmailPage } from './AccountPage'
 import ProviderServicesPage from './ProviderServicesPage'
 import ServiceDetailsPage from './ServiceDetailsPage'
+
+const categories = [
+  { name: 'IT & teknik', icon: '💻', aliases: ['IT', 'Teknik', 'IT-support', 'Webbutveckling'] },
+  { name: 'Frisör & skönhet', icon: '✂️', aliases: ['Frisör', 'Skönhet', 'Barberare'] },
+  { name: 'Restaurang', icon: '🍽️', aliases: ['Restauranger', 'Bordbokning', 'Mat & dryck'] },
+  { name: 'Hem & trädgård', icon: '🪴', aliases: ['Hemservice', 'Trädgård', 'Städning', 'Hantverk'] },
+  { name: 'Foto & event', icon: '📷', aliases: ['Foto', 'Fotograf', 'Event'] },
+  { name: 'Hälsa & träning', icon: '🏃', aliases: ['Hälsa', 'Träning', 'Massage'] },
+  { name: 'Fordon', icon: '🚗', aliases: ['Bil', 'Bilservice', 'Bilverkstad'] },
+  { name: 'Utbildning', icon: '📚', aliases: ['Kurser', 'Läxhjälp', 'Undervisning'] },
+]
+
+const categoryComparer = new Intl.Collator('sv-SE', { sensitivity: 'base' })
 
 function categorySearch(category: string) {
   return category ? `?${new URLSearchParams({ category })}` : ''
@@ -23,7 +36,8 @@ function ServiceResults({ category }: { category: string }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    const search = categorySearch(category)
+    const group = categories.find((item) => categoryComparer.compare(item.name, category) === 0)
+    const search = group ? '' : categorySearch(category)
 
     async function loadServices() {
       try {
@@ -33,8 +47,10 @@ function ServiceResults({ category }: { category: string }) {
         }
 
         const services: ServiceSummary[] = await response.json()
+        const matches = group ? services.filter((service) =>
+          [group.name, ...group.aliases].some((name) => categoryComparer.compare(name, service.category) === 0)) : services
         if (!controller.signal.aborted) {
-          setResult({ status: 'success', services })
+          setResult({ status: 'success', services: matches })
         }
       } catch {
         if (!controller.signal.aborted) {
@@ -77,9 +93,11 @@ function ServiceResults({ category }: { category: string }) {
 function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
   const [categoryInput, setCategoryInput] = useState(initialCategory)
   const [category, setCategory] = useState(initialCategory)
+  const categoryRow = useRef<HTMLUListElement>(null)
 
   function applyCategory(value: string) {
     const category = value.trim()
+    setCategoryInput(category)
     window.history.replaceState(null, '', `/${categorySearch(category)}`)
     setCategory(category)
   }
@@ -91,6 +109,32 @@ function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
 
   return (
     <main className="catalog-page">
+      <nav className="category-nav" aria-label="Tjänstekategorier">
+        <ul className="category-row" ref={categoryRow}>
+          <li>
+            <button type="button" className="category-tab" aria-pressed={!category} onClick={() => applyCategory('')}>
+              <span className="category-icon category-icon-all" aria-hidden="true">⊞</span>
+              Alla
+            </button>
+          </li>
+          {categories.map((item) => (
+            <li key={item.name}>
+              <button type="button" className="category-tab"
+                aria-pressed={categoryComparer.compare(category, item.name) === 0}
+                onClick={() => applyCategory(item.name)}>
+                <span className="category-icon" aria-hidden="true">{item.icon}</span>
+                {item.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="category-arrows">
+          <button type="button" className="secondary" aria-label="Bläddra kategorier åt vänster"
+            onClick={() => categoryRow.current?.scrollBy({ left: -320 })}>‹</button>
+          <button type="button" className="secondary" aria-label="Bläddra kategorier åt höger"
+            onClick={() => categoryRow.current?.scrollBy({ left: 320 })}>›</button>
+        </div>
+      </nav>
       <section className="catalog-hero" aria-labelledby="catalog-title">
         <div className="hero-copy">
           <h1 id="catalog-title">Hitta och boka tjänster.</h1>
@@ -107,12 +151,7 @@ function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
             <div className="filter">
               <input id="category" value={categoryInput} onChange={(event) => setCategoryInput(event.target.value)} />
               <button type="submit">Filtrera</button>
-              {category && (
-                <button type="button" className="secondary" onClick={() => {
-                  setCategoryInput('')
-                  applyCategory('')
-                }}>Visa alla</button>
-              )}
+              {category && <button type="button" className="secondary" onClick={() => applyCategory('')}>Visa alla</button>}
             </div>
           </form>
         </div>
@@ -144,6 +183,10 @@ function App() {
             <span className="brand-mark" aria-hidden="true">S</span>
             SkillConnect
           </a>
+          <div className="main-links">
+            <a href="/">Utforska</a>
+            <a href="/account/services">Erbjud en tjänst</a>
+          </div>
           <a className="account-link" href="/account">Mitt konto <span aria-hidden="true">↗</span></a>
         </nav>
       </header>
