@@ -64,6 +64,7 @@ public static class AccountEndpoints
         accounts.MapPost("/confirm-email", ConfirmEmailAsync).RequireRateLimiting("account-attempts");
         accounts.MapPost("/login", LoginAsync).RequireRateLimiting("account-attempts");
         accounts.MapGet("/me", GetAccountAsync).RequireAuthorization();
+        app.MapPut("/api/provider/profile", UpdateProviderProfileAsync).RequireAuthorization(AccountAccess.ProviderPolicy);
         accounts.MapPost("/logout", LogoutAsync).RequireAuthorization();
     }
 
@@ -165,7 +166,30 @@ public static class AccountEndpoints
         {
             email = user.Email,
             role = user.AccountRole == AccountRole.Provider ? "provider" : "customer",
+            businessName = user.AccountRole == AccountRole.Provider ? user.BusinessName : null,
         });
+    }
+
+    private static async Task<IResult> UpdateProviderProfileAsync(
+        ProviderProfileRequest request, HttpContext context, UserManager<SkillConnectUser> users)
+    {
+        var businessName = request.BusinessName?.Trim();
+        if (businessName is not { Length: > 0 and <= 120 })
+        {
+            return Results.BadRequest(new { message = "Enter a business name of up to 120 characters." });
+        }
+
+        var user = await users.GetUserAsync(context.User);
+        if (user is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        user.BusinessName = businessName;
+        var result = await users.UpdateAsync(user);
+        return result.Succeeded
+            ? Results.Ok(new { businessName })
+            : Results.Conflict(new { message = "The provider profile could not be saved. Try again." });
     }
 
     private static async Task<IResult> LogoutAsync(HttpRequest request, SignInManager<SkillConnectUser> signIn)
@@ -186,4 +210,5 @@ public static class AccountEndpoints
     private sealed record EmailRequest(string? Email);
     private sealed record ConfirmEmailRequest(Guid UserId, string? Code);
     private sealed record LoginRequest(string? Email, string? Password);
+    private sealed record ProviderProfileRequest(string? BusinessName);
 }

@@ -243,6 +243,40 @@ public sealed class ProviderServiceEndpointTests
             $"/api/accounts/bookings/{anotherBooking.Id}/cancellation", null)).StatusCode);
     }
 
+    [Fact]
+    public async Task ProvidersCanSetTheirPublicBusinessName()
+    {
+        using var factory = new TestFactory();
+        using var visitor = factory.CreateAccountClient();
+        using var customer = factory.CreateAccountClient();
+        using var provider = factory.CreateAccountClient();
+        await SignInAsync(factory, customer, "customer@example.test", AccountRole.Customer);
+        await SignInAsync(factory, provider, "private-provider@example.test", AccountRole.Provider);
+
+        using var response = await provider.PostAsJsonAsync(ServicesPath,
+            new { name = "Garden care", description = "Seasonal care", category = "Gardening" });
+        var service = await response.Content.ReadFromJsonAsync<ProviderService>();
+        Assert.NotNull(service);
+        Assert.Equal(HttpStatusCode.OK, (await provider.PutAsync($"{ServicesPath}/{service.Id}/publication", null)).StatusCode);
+        Assert.Null(Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).BusinessName);
+
+        const string profilePath = "/api/provider/profile";
+        var profile = new { businessName = "  Gröna Gården  " };
+        Assert.Equal(HttpStatusCode.Unauthorized, (await visitor.PutAsJsonAsync(profilePath, profile)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await customer.PutAsJsonAsync(profilePath, profile)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await provider.PutAsJsonAsync(profilePath, new { businessName = " " })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await provider.PutAsJsonAsync(profilePath, profile)).StatusCode);
+        Assert.Equal("Gröna Gården", (await provider.GetFromJsonAsync<BusinessProfile>("/api/accounts/me"))?.BusinessName);
+        Assert.Equal("Gröna Gården", Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).BusinessName);
+
+        var rawDetails = await visitor.GetStringAsync($"/api/services/{service.Id}");
+        Assert.Equal("Gröna Gården", System.Text.Json.JsonSerializer.Deserialize<ServiceDetails>(
+            rawDetails, System.Text.Json.JsonSerializerOptions.Web)?.BusinessName);
+        Assert.DoesNotContain("private-provider@example.test", rawDetails);
+    }
+
+    private sealed record BusinessProfile(string? BusinessName);
+
     private static async Task<Guid> SignInAsync(TestFactory factory, HttpClient client, string email, AccountRole role)
     {
         await using var scope = factory.Services.CreateAsyncScope();

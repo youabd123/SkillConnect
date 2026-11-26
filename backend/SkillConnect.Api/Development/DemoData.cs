@@ -41,6 +41,7 @@ internal static class DemoData
         await db.Database.MigrateAsync();
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         var provider = await EnsureAccountAsync(users, ProviderEmail, AccountRole.Provider);
+        provider.BusinessName ??= "SkillConnect Demo";
         await EnsureAccountAsync(users, CustomerEmail, AccountRole.Customer);
 
         var now = TimeProvider.System.GetUtcNow();

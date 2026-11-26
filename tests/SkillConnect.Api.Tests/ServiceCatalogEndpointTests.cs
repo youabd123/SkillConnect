@@ -36,7 +36,7 @@ public sealed class ServiceCatalogEndpointTests
 
         var details = await client.GetFromJsonAsync<ServiceDetails>($"/api/services/{listing.Id}");
 
-        Assert.Equal(new ServiceDetails(listing.Id, listing.Name, listing.Description, listing.Category), details);
+        Assert.Equal(new ServiceDetails(listing.Id, listing.Name, listing.Description, listing.Category, null), details);
     }
 
     [Theory]
@@ -82,9 +82,12 @@ public sealed class ServiceCatalogEndpointTests
         public ServiceListing PublishedListing => listings[0];
         public ServiceListing DraftListing => listings[2];
 
-        public Task<ServiceListing?> FindPublishedAsync(Guid id, CancellationToken cancellationToken)
+        public Task<ServiceDetails?> FindPublishedAsync(Guid id, CancellationToken cancellationToken)
         {
-            return Task.FromResult(listings.SingleOrDefault(listing => listing.Id == id && listing.IsPublished));
+            var listing = listings.SingleOrDefault(listing => listing.Id == id && listing.IsPublished);
+            return Task.FromResult(listing is null
+                ? null
+                : new ServiceDetails(listing.Id, listing.Name, listing.Description, listing.Category, null));
         }
 
         public Task<IReadOnlyList<ServiceSummary>> ListPublishedAsync(
@@ -94,7 +97,7 @@ public sealed class ServiceCatalogEndpointTests
         {
             IReadOnlyList<ServiceSummary> results = listings
                 .Where(listing => listing.IsPublished && (category is null || listing.Category == category))
-                .Select(listing => new ServiceSummary(listing.Id, listing.Name, listing.Category, null))
+                .Select(listing => new ServiceSummary(listing.Id, listing.Name, listing.Category, null, null))
                 .ToArray();
 
             return Task.FromResult(results);

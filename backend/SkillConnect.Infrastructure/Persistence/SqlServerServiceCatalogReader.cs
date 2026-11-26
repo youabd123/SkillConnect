@@ -1,17 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using SkillConnect.Application.Services;
-using SkillConnect.Domain.Services;
+using SkillConnect.Infrastructure.Identity;
 
 namespace SkillConnect.Infrastructure.Persistence;
 
 public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContext)
     : IServiceCatalogReader
 {
-    public Task<ServiceListing?> FindPublishedAsync(Guid id, CancellationToken cancellationToken)
+    public Task<ServiceDetails?> FindPublishedAsync(Guid id, CancellationToken cancellationToken)
     {
+        var providers = dbContext.Users.Where(user => user.AccountRole == AccountRole.Provider);
         return dbContext.ServiceListings
             .AsNoTracking()
-            .SingleOrDefaultAsync(service => service.Id == id && service.IsPublished, cancellationToken);
+            .Where(service => service.Id == id && service.IsPublished)
+            .Select(service => new ServiceDetails(service.Id, service.Name, service.Description, service.Category,
+                providers.Where(provider => provider.Id == service.ProviderId).Select(provider => provider.BusinessName).FirstOrDefault()))
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<ServiceSummary>> ListPublishedAsync(
@@ -29,6 +33,7 @@ public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContex
         }
 
         var availableSlots = dbContext.GetUpcomingAvailableSlots(now);
+        var providers = dbContext.Users.Where(user => user.AccountRole == AccountRole.Provider);
         return await query
             .OrderBy(service => service.Name)
             .ThenBy(service => service.Id)
@@ -36,7 +41,8 @@ public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContex
                 availableSlots.Where(slot => slot.ServiceId == service.Id)
                     .OrderBy(slot => slot.StartsAt)
                     .Select(slot => (DateTimeOffset?)slot.StartsAt)
-                    .FirstOrDefault()))
+                    .FirstOrDefault(),
+                providers.Where(provider => provider.Id == service.ProviderId).Select(provider => provider.BusinessName).FirstOrDefault()))
             .ToListAsync(cancellationToken);
     }
 }
