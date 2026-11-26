@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AccountPage, { ConfirmEmailPage } from './AccountPage'
 import ProviderServicesPage from './ProviderServicesPage'
 import ServiceDetailsPage from './ServiceDetailsPage'
+import { formatBookingStart } from './bookingTimes'
 
 const categories = [
   { name: 'IT & teknik', icon: '💻', aliases: ['IT', 'Teknik', 'IT-support', 'Webbutveckling'] },
@@ -24,6 +25,7 @@ type ServiceSummary = {
   id: string
   name: string
   category: string
+  nextAvailableAt: string | null
 }
 
 type CatalogResult =
@@ -82,6 +84,12 @@ function ServiceResults({ category }: { category: string }) {
           <a className="catalog-card" href={`/services/${service.id}${categorySearch(category)}`}>
             <p className="category-label">{service.category}</p>
             <h3>{service.name}</h3>
+            {service.nextAvailableAt ? (
+              <p className="card-availability">
+                <span>Nästa lediga tid</span>
+                <time dateTime={service.nextAvailableAt}>{formatBookingStart(service.nextAvailableAt)}</time>
+              </p>
+            ) : <p className="card-availability">Inga lediga tider just nu</p>}
             <span className="card-arrow" aria-hidden="true">↗</span>
           </a>
         </li>

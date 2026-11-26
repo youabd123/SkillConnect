@@ -415,8 +415,23 @@ button:disabled {
 }
 
 .catalog-card h3 {
+  grid-column: 1 / -1;
   font: 700 1.4rem/1.16 var(--display);
   letter-spacing: -0.035em;
+}
+
+.card-availability {
+  align-self: end;
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.card-availability time {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .category-label {
