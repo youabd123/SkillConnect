@@ -13,7 +13,7 @@ dotnet run --project backend/SkillConnect.Api --launch-profile http -- --seed-de
 dotnet run --project backend/SkillConnect.Api --launch-profile http
 ```
 
-In a second terminal, run `cd frontend`, `npm ci` and `npm run dev`. Open [localhost:5173](http://localhost:5173). The seed command prepares a published service and at least two upcoming unbooked times. Run it again between demos to replenish times while preserving existing bookings.
+In a second terminal, run `cd frontend`, `npm ci` and `npm run dev`. Open [localhost:5173](http://localhost:5173). The seed command prepares seven fictional services with at least two upcoming unbooked times each. Use the category row to browse **IT & teknik**, **Frisör & skönhet**, **Restaurang** and **Hem & trädgård**. Run the seed command again between demos to replenish times while preserving existing bookings.
 
 | Role | Demo email |
 | --- | --- |

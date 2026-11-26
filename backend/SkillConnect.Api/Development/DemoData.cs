@@ -13,7 +13,16 @@ internal static class DemoData
     private const string ProviderEmail = "provider@skillconnect.test";
     private const string CustomerEmail = "customer@skillconnect.test";
     private const string Password = "SkillConnect-Demo123!";
-    private const string ServiceName = "Trädgårdsskötsel";
+    private static readonly DemoListing[] Listings =
+    [
+        new("Trädgårdsskötsel", "Hjälp med gräsklippning och lättare trädgårdsarbete.", "Trädgård"),
+        new("Datorhjälp", "Få hjälp med en långsam dator, uppdateringar eller installation av program.", "IT & teknik"),
+        new("Wi-Fi och hemnätverk", "Felsök anslutningen och få hjälp att ställa in router och trådlöst nätverk.", "IT & teknik"),
+        new("Klippning och styling", "Konsultation, klippning och enkel styling anpassad till din frisyr.", "Frisör & skönhet"),
+        new("Skäggtrimning", "Trimning och formning av skägget med råd om skötsel hemma.", "Frisör & skönhet"),
+        new("Bord för två", "Reservera ett bord för två personer på en fiktiv kvartersbistro.", "Restaurang"),
+        new("Provsmakning av säsongens meny", "Boka en provsmakning med tre små rätter från ett fiktivt restaurangkök.", "Restaurang"),
+    ];
 
     public static async Task SeedAsync(WebApplication app)
     {
@@ -34,16 +43,31 @@ internal static class DemoData
         var provider = await EnsureAccountAsync(users, ProviderEmail, AccountRole.Provider);
         await EnsureAccountAsync(users, CustomerEmail, AccountRole.Customer);
 
+        var now = TimeProvider.System.GetUtcNow();
+        var tomorrow = new DateTimeOffset(now.UtcDateTime.Date.AddDays(1).AddHours(9), TimeSpan.Zero);
+        for (var index = 0; index < Listings.Length; index++)
+        {
+            var firstStart = tomorrow.AddDays(index / 3).AddHours(index % 3 * 4);
+            await EnsureListingAsync(db, provider.Id, Listings[index], now, firstStart);
+        }
+
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        app.Logger.LogInformation("Demo database ready for {Provider} and {Customer}.", ProviderEmail, CustomerEmail);
+    }
+
+    private static async Task EnsureListingAsync(
+        SkillConnectDbContext db, Guid providerId, DemoListing demo, DateTimeOffset now, DateTimeOffset firstStart)
+    {
         var listing = await db.ServiceListings.FirstOrDefaultAsync(service =>
-            service.ProviderId == provider.Id && service.Name == ServiceName);
+            service.ProviderId == providerId && service.Name == demo.Name);
         if (listing is null)
         {
-            listing = new ServiceListing(provider.Id, ServiceName, "Hjälp med gräsklippning och lättare trädgårdsarbete.", "Trädgård");
+            listing = new ServiceListing(providerId, demo.Name, demo.Description, demo.Category);
             db.ServiceListings.Add(listing);
         }
         listing.Publish();
 
-        var now = TimeProvider.System.GetUtcNow();
         var upcoming = await db.AvailabilitySlots
             .Where(slot => slot.ServiceId == listing.Id && slot.StartsAt > now && !slot.IsWithdrawn)
             .Select(slot => new
@@ -51,7 +75,6 @@ internal static class DemoData
                 slot.EndsAt,
                 IsBooked = db.Bookings.Any(booking => booking.SlotId == slot.Id && !booking.IsCancelled),
             }).ToListAsync();
-        var firstStart = new DateTimeOffset(now.UtcDateTime.Date.AddDays(1).AddHours(9), TimeSpan.Zero);
         if (upcoming.Count > 0)
         {
             var nextStart = upcoming.Max(slot => slot.EndsAt).AddHours(1);
@@ -66,11 +89,9 @@ internal static class DemoData
             db.AvailabilitySlots.Add(AvailabilitySlot.Create(listing.Id, firstStart, firstStart.AddHours(1), now)!);
             firstStart = firstStart.AddHours(2);
         }
-
-        await db.SaveChangesAsync();
-        await transaction.CommitAsync();
-        app.Logger.LogInformation("Demo database ready for {Provider} and {Customer}.", ProviderEmail, CustomerEmail);
     }
+
+    private sealed record DemoListing(string Name, string Description, string Category);
 
     private static async Task<SkillConnectUser> EnsureAccountAsync(
         UserManager<SkillConnectUser> users, string email, AccountRole role)
