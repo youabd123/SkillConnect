@@ -11,10 +11,9 @@ public sealed class SqlServerBookingStore(SkillConnectDbContext dbContext) : IBo
         Guid serviceId, Guid slotId, Guid customerId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var availableTime = await (
-            from slot in dbContext.AvailabilitySlots
+            from slot in dbContext.GetUpcomingAvailableSlots(now)
             join service in dbContext.ServiceListings on slot.ServiceId equals service.Id
-            where slot.Id == slotId && service.Id == serviceId && service.IsPublished && slot.StartsAt > now &&
-                !slot.IsWithdrawn && !dbContext.Bookings.Any(booking => booking.SlotId == slot.Id && !booking.IsCancelled)
+            where slot.Id == slotId && service.Id == serviceId && service.IsPublished
             select new { service.Name, Slot = slot })
             .SingleOrDefaultAsync(cancellationToken);
 

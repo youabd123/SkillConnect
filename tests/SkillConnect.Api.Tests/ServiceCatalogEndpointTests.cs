@@ -87,12 +87,14 @@ public sealed class ServiceCatalogEndpointTests
             return Task.FromResult(listings.SingleOrDefault(listing => listing.Id == id && listing.IsPublished));
         }
 
-        public Task<IReadOnlyList<ServiceListing>> ListPublishedAsync(
+        public Task<IReadOnlyList<ServiceSummary>> ListPublishedAsync(
             string? category,
+            DateTimeOffset now,
             CancellationToken cancellationToken)
         {
-            IReadOnlyList<ServiceListing> results = listings
+            IReadOnlyList<ServiceSummary> results = listings
                 .Where(listing => listing.IsPublished && (category is null || listing.Category == category))
+                .Select(listing => new ServiceSummary(listing.Id, listing.Name, listing.Category, null))
                 .ToArray();
 
             return Task.FromResult(results);

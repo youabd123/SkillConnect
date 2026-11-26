@@ -142,13 +142,16 @@ public sealed class ProviderServiceEndpointTests
             new { startsAt = now.AddDays(2), endsAt = now.AddDays(2).AddHours(1) });
         var later = await laterResponse.Content.ReadFromJsonAsync<AvailableTime>();
         Assert.NotNull(later);
+        Assert.Equal(slot.StartsAt, Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).NextAvailableAt);
         Assert.Equal(HttpStatusCode.NotFound, (await otherProvider.DeleteAsync($"{managePath}/{later.Id}")).StatusCode);
 
         factory.Clock.UtcNow = now.AddDays(1);
         Assert.Equal(later, Assert.Single((await visitor.GetFromJsonAsync<AvailableTime[]>(publicPath))!));
+        Assert.Equal(later.StartsAt, Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).NextAvailableAt);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.DeleteAsync($"{managePath}/{slot.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"{managePath}/{later.Id}")).StatusCode);
         Assert.Empty((await visitor.GetFromJsonAsync<AvailableTime[]>(publicPath))!);
+        Assert.Null(Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).NextAvailableAt);
     }
 
     [Fact]
@@ -192,6 +195,7 @@ public sealed class ProviderServiceEndpointTests
         Assert.Equal(time.StartsAt, booking.StartsAt);
         Assert.Equal(HttpStatusCode.Conflict, (await otherCustomer.PostAsJsonAsync(bookingPath, new { })).StatusCode);
         Assert.Empty((await visitor.GetFromJsonAsync<AvailableTime[]>(publicAvailabilityPath))!);
+        Assert.Null(Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).NextAvailableAt);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.DeleteAsync($"{availabilityPath}/{time.Id}")).StatusCode);
         Assert.Equal(booking, Assert.Single((await customer.GetFromJsonAsync<BookingSummary[]>("/api/accounts/bookings"))!));
         Assert.Equal(booking, Assert.Single((await owner.GetFromJsonAsync<BookingSummary[]>("/api/provider/bookings"))!));
@@ -205,6 +209,7 @@ public sealed class ProviderServiceEndpointTests
         Assert.Equal(HttpStatusCode.NoContent, (await customer.PutAsync(cancellationPath, null)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await customer.PutAsync(cancellationPath, null)).StatusCode);
         Assert.Equal(time, Assert.Single((await visitor.GetFromJsonAsync<AvailableTime[]>(publicAvailabilityPath))!));
+        Assert.Equal(time.StartsAt, Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).NextAvailableAt);
 
         using var rebooked = await otherCustomer.PostAsJsonAsync(bookingPath, new { });
         Assert.Equal(HttpStatusCode.Created, rebooked.StatusCode);

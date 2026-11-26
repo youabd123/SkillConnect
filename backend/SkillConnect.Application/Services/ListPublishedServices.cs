@@ -1,18 +1,14 @@
 namespace SkillConnect.Application.Services;
 
-public sealed class ListPublishedServices(IServiceCatalogReader catalogReader)
+public sealed class ListPublishedServices(IServiceCatalogReader catalogReader, TimeProvider clock)
 {
-    public async Task<IReadOnlyList<ServiceSummary>> ExecuteAsync(
+    public Task<IReadOnlyList<ServiceSummary>> ExecuteAsync(
         string? category,
         CancellationToken cancellationToken)
     {
         var categoryFilter = string.IsNullOrWhiteSpace(category) ? null : category.Trim();
-        var listings = await catalogReader.ListPublishedAsync(categoryFilter, cancellationToken);
-
-        return listings
-            .Select(listing => new ServiceSummary(listing.Id, listing.Name, listing.Category))
-            .ToArray();
+        return catalogReader.ListPublishedAsync(categoryFilter, clock.GetUtcNow(), cancellationToken);
     }
 }
 
-public sealed record ServiceSummary(Guid Id, string Name, string Category);
+public sealed record ServiceSummary(Guid Id, string Name, string Category, DateTimeOffset? NextAvailableAt);

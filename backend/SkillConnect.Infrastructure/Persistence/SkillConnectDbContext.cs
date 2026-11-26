@@ -13,6 +13,10 @@ public sealed class SkillConnectDbContext(DbContextOptions<SkillConnectDbContext
     public DbSet<AvailabilitySlot> AvailabilitySlots => Set<AvailabilitySlot>();
     public DbSet<Booking> Bookings => Set<Booking>();
 
+    internal IQueryable<AvailabilitySlot> GetUpcomingAvailableSlots(DateTimeOffset now) =>
+        AvailabilitySlots.Where(slot => slot.StartsAt > now && !slot.IsWithdrawn &&
+            !Bookings.Any(booking => booking.SlotId == slot.Id && !booking.IsCancelled));
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
