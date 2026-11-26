@@ -5,6 +5,7 @@ type ServiceDetails = {
   name: string
   description: string
   category: string
+  businessName: string | null
 }
 
 type DetailsResult =
@@ -62,6 +63,7 @@ export default function ServiceDetailsPage({ id, backHref }: { id: string; backH
           <div className="detail-copy">
             <p className="category-label">{result.service.category}</p>
             <h1>{result.service.name}</h1>
+            {result.service.businessName && <p className="business-name detail-business-name">Erbjuds av {result.service.businessName}</p>}
             <p className="service-description">{result.service.description}</p>
           </div>
           <ServiceAvailability key={id} serviceId={id} />

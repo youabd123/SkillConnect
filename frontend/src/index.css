@@ -414,10 +414,29 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
-.catalog-card h3 {
+.catalog-card-title {
   grid-column: 1 / -1;
+}
+
+.catalog-card h3 {
   font: 700 1.4rem/1.16 var(--display);
   letter-spacing: -0.035em;
+}
+
+.business-name {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.detail-business-name {
+  margin-bottom: 1rem;
+  font-weight: 650;
+}
+
+.provider-profile {
+  margin-top: 2rem;
 }
 
 .card-availability {

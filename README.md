@@ -69,6 +69,7 @@ dotnet ef database update --project backend/SkillConnect.Infrastructure
 The catalog starts empty on a new database. The health endpoint runs independently of SQL Server.
 
 To add a listing, sign in as a provider and open **Mina tjänster**. Create a draft, then publish it to make it visible in the public catalog.
+Set the public business name under **Mitt konto → Företagsuppgifter**. It appears on the provider's published service cards and details pages.
 
 Use **Hantera tider** on a listing to add or remove individual upcoming slots. Visitors see upcoming slots on the details page once the listing is published. Times are displayed in the browser's local time zone.
 

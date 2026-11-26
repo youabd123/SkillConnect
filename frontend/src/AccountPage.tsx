@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import AccountBookings from './AccountBookings'
+import ProviderBusinessNameForm from './ProviderBusinessNameForm'
 
-type Account = { email: string; role: 'customer' | 'provider' }
+type Account = { email: string; role: 'customer' | 'provider'; businessName: string | null }
 type Session = { status: 'loading' | 'signed-out' | 'error' } | { status: 'signed-in'; account: Account }
 type Notice = { status: 'info' | 'error'; text: string }
 
@@ -150,6 +151,9 @@ export default function AccountPage() {
           <p>{session.account.email} · {session.account.role === 'provider' ? 'Utförare' : 'Kund'}</p>
           {session.account.role === 'provider' && <p><a href="/account/services">Mina tjänster</a></p>}
           <button type="button" disabled={pending} onClick={signOut}>Logga ut</button>
+          {session.account.role === 'provider' && (
+            <ProviderBusinessNameForm key={session.account.email} initialName={session.account.businessName} />
+          )}
           <AccountBookings key={session.account.email} role={session.account.role} />
         </>
       )}

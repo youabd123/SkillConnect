@@ -26,6 +26,7 @@ type ServiceSummary = {
   name: string
   category: string
   nextAvailableAt: string | null
+  businessName: string | null
 }
 
 type CatalogResult =
@@ -83,7 +84,10 @@ function ServiceResults({ category }: { category: string }) {
         <li key={service.id}>
           <a className="catalog-card" href={`/services/${service.id}${categorySearch(category)}`}>
             <p className="category-label">{service.category}</p>
-            <h3>{service.name}</h3>
+            <div className="catalog-card-title">
+              <h3>{service.name}</h3>
+              {service.businessName && <p className="business-name">{service.businessName}</p>}
+            </div>
             {service.nextAvailableAt ? (
               <p className="card-availability">
                 <span>Nästa lediga tid</span>
