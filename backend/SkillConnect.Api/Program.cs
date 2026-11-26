@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using SkillConnect.Api.Accounts;
+using SkillConnect.Api.Development;
 using SkillConnect.Api.Services;
 using SkillConnect.Application.Services;
 using SkillConnect.Infrastructure.Persistence;
 
-var builder = WebApplication.CreateBuilder(args);
+var seedDemo = args.Contains("--seed-demo", StringComparer.Ordinal);
+var builder = WebApplication.CreateBuilder(args.Where(arg => arg != "--seed-demo").ToArray());
 builder.Services.AddDbContext<SkillConnectDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SkillConnect")));
 builder.Services.AddScoped<IServiceCatalogReader, SqlServerServiceCatalogReader>();
@@ -16,6 +18,12 @@ builder.Services.AddServiceAvailability();
 builder.Services.AddServiceBookings();
 
 var app = builder.Build();
+if (seedDemo)
+{
+    await DemoData.SeedAsync(app);
+    return;
+}
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

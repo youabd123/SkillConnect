@@ -3,6 +3,25 @@ A full-stack service marketplace built with ASP.NET Core, React, TypeScript and 
 
 See the [requirements specification](docs/kravspec.md) for the first release's scope and booking flow.
 
+## Local demo on Windows
+
+With the .NET 10 SDK, Node.js 24 and SQL Server LocalDB installed, run these commands from the repository root in PowerShell:
+
+```powershell
+$env:ConnectionStrings__SkillConnect = 'Server=(localdb)\MSSQLLocalDB;Database=SkillConnectDemo;Integrated Security=true;TrustServerCertificate=true'
+dotnet run --project backend/SkillConnect.Api --launch-profile http -- --seed-demo
+dotnet run --project backend/SkillConnect.Api --launch-profile http
+```
+
+In a second terminal, run `cd frontend`, `npm ci` and `npm run dev`. Open [localhost:5173](http://localhost:5173). The seed command prepares a published service and at least two upcoming unbooked times. Run it again between demos to replenish times while preserving existing bookings.
+
+| Role | Demo email |
+| --- | --- |
+| Provider | `provider@skillconnect.test` |
+| Customer | `customer@skillconnect.test` |
+
+Both demo accounts use `SkillConnect-Demo123!` and are already confirmed. As the customer, open **Trädgårdsskötsel**, book a time and check **Mina bokningar** under **Mitt konto**. Then sign in as the provider to see the same booking under **Bokningar för mina tjänster**.
+
 ## Local development
 
 Install the .NET 10 SDK and Node.js 24. Configure the database and apply the migration as described below, then run the API from the repository root in the same terminal:
