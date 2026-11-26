@@ -49,7 +49,7 @@ export function ConfirmEmailPage() {
 
   return (
     <main>
-      <a href="/account">Till kontot</a>
+      <a className="back-link" href="/account"><span aria-hidden="true">←</span> Till kontot</a>
       <h1>Bekräfta din e-postadress</h1>
       {userId && code
         ? <button type="button" disabled={pending} onClick={confirmEmail}>Bekräfta e-post</button>
@@ -140,7 +140,7 @@ export default function AccountPage() {
 
   return (
     <main>
-      <a href="/">Till katalogen</a>
+      <a className="back-link" href="/"><span aria-hidden="true">←</span> Till katalogen</a>
       <h1>{session.status === 'signed-in' ? 'Mitt konto' : mode === 'login' ? 'Logga in' : 'Skapa konto'}</h1>
       {session.status === 'loading' && <p role="status">Kontrollerar inloggning…</p>}
       {session.status === 'error' && <p role="alert">Kontot kunde inte hämtas. Försök igen senare.</p>}

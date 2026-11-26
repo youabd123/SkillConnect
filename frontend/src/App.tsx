@@ -48,23 +48,26 @@ function ServiceResults({ category }: { category: string }) {
   }, [category])
 
   if (result.status === 'loading') {
-    return <p role="status">Hämtar tjänster…</p>
+    return <p className="catalog-message" role="status">Hämtar tjänster…</p>
   }
 
   if (result.status === 'error') {
-    return <p role="alert">Tjänsterna kunde inte hämtas. Försök igen senare.</p>
+    return <p className="catalog-message" role="alert">Tjänsterna kunde inte hämtas. Försök igen senare.</p>
   }
 
   if (result.services.length === 0) {
-    return <p role="status">{category ? 'Inga tjänster i den kategorin.' : 'Inga publicerade tjänster ännu.'}</p>
+    return <p className="catalog-message" role="status">{category ? 'Inga tjänster i den kategorin.' : 'Inga publicerade tjänster ännu.'}</p>
   }
 
   return (
-    <ul className="services">
+    <ul className="catalog-grid">
       {result.services.map((service) => (
         <li key={service.id}>
-          <h2><a href={`/services/${service.id}${categorySearch(category)}`}>{service.name}</a></h2>
-          <p>{service.category}</p>
+          <a className="catalog-card" href={`/services/${service.id}${categorySearch(category)}`}>
+            <p className="category-label">{service.category}</p>
+            <h3>{service.name}</h3>
+            <span className="card-arrow" aria-hidden="true">↗</span>
+          </a>
         </li>
       ))}
     </ul>
@@ -87,34 +90,39 @@ function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
   }
 
   return (
-    <main>
-      <nav aria-label="Konto"><a href="/account">Mitt konto</a></nav>
-      <h1>SkillConnect</h1>
-      <form onSubmit={filterServices}>
-        <label htmlFor="category">Kategori</label>
-        <div className="filter">
-          <input
-            id="category"
-            value={categoryInput}
-            onChange={(event) => setCategoryInput(event.target.value)}
-          />
-          <button type="submit">Filtrera</button>
-          {category && (
-            <button type="button" className="secondary" onClick={() => {
-              setCategoryInput('')
-              applyCategory('')
-            }}>
-              Visa alla
-            </button>
-          )}
+    <main className="catalog-page">
+      <section className="catalog-hero" aria-labelledby="catalog-title">
+        <div className="hero-copy">
+          <h1 id="catalog-title">Hitta och boka tjänster.</h1>
+          <p>Utforska tjänster från företag i olika branscher och boka en tid som passar dig.</p>
+          <a className="hero-link" href="#tjanster">Utforska tjänster <span aria-hidden="true">↓</span></a>
         </div>
-      </form>
-      <ServiceResults key={category} category={category} />
+        <div className="hero-art" aria-hidden="true" />
+      </section>
+      <section className="catalog-section" id="tjanster" aria-labelledby="services-title">
+        <div className="catalog-toolbar">
+          <h2 id="services-title">{category || 'Alla tjänster'}</h2>
+          <form onSubmit={filterServices}>
+            <label htmlFor="category">Kategori</label>
+            <div className="filter">
+              <input id="category" value={categoryInput} onChange={(event) => setCategoryInput(event.target.value)} />
+              <button type="submit">Filtrera</button>
+              {category && (
+                <button type="button" className="secondary" onClick={() => {
+                  setCategoryInput('')
+                  applyCategory('')
+                }}>Visa alla</button>
+              )}
+            </div>
+          </form>
+        </div>
+        <ServiceResults key={category} category={category} />
+      </section>
     </main>
   )
 }
 
-function App() {
+function CurrentPage() {
   if (window.location.pathname === '/account') return <AccountPage />
   if (window.location.pathname === '/account/services') return <ProviderServicesPage />
   if (window.location.pathname === '/confirm-email') return <ConfirmEmailPage />
@@ -125,6 +133,23 @@ function App() {
   return serviceId
     ? <ServiceDetailsPage id={serviceId} backHref={`/${categorySearch(category)}`} />
     : <ServiceCatalog initialCategory={category} />
+}
+
+function App() {
+  return (
+    <>
+      <header className="site-header">
+        <nav className="site-nav" aria-label="Huvudmeny">
+          <a className="wordmark" href="/">
+            <span className="brand-mark" aria-hidden="true">S</span>
+            SkillConnect
+          </a>
+          <a className="account-link" href="/account">Mitt konto <span aria-hidden="true">↗</span></a>
+        </nav>
+      </header>
+      <CurrentPage />
+    </>
+  )
 }
 
 export default App

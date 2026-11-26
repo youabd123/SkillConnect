@@ -50,18 +50,20 @@ export default function ServiceDetailsPage({ id, backHref }: { id: string; backH
   }, [id])
 
   return (
-    <main>
-      <a href={backHref}>Tillbaka till katalogen</a>
+    <main className="details-page">
+      <a className="back-link" href={backHref}><span aria-hidden="true">←</span> Tillbaka till katalogen</a>
       {result.status === 'loading' && <p role="status">Hämtar tjänsten…</p>}
       {result.status === 'missing' && <h1>Tjänsten hittades inte</h1>}
       {result.status === 'error' && (
         <p role="alert">Tjänsten kunde inte hämtas. Försök igen senare.</p>
       )}
       {result.status === 'success' && (
-        <article>
-          <h1>{result.service.name}</h1>
-          <p>{result.service.category}</p>
-          <p className="service-description">{result.service.description}</p>
+        <article className="service-detail">
+          <div className="detail-copy">
+            <p className="category-label">{result.service.category}</p>
+            <h1>{result.service.name}</h1>
+            <p className="service-description">{result.service.description}</p>
+          </div>
           <ServiceAvailability key={id} serviceId={id} />
         </article>
       )}

@@ -106,7 +106,7 @@ export default function ProviderServicesPage() {
 
   return (
     <main>
-      <a href="/account">Till kontot</a>
+      <a className="back-link" href="/account"><span aria-hidden="true">←</span> Till kontot</a>
       <h1>Mina tjänster</h1>
       {page.status === 'loading' && <p role="status">Hämtar tjänster…</p>}
       {page.status === 'sign-in' && <p role="status">Logga in för att hantera dina tjänster.</p>}
