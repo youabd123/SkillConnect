@@ -74,6 +74,8 @@ Use **Hantera tider** on a listing to add or remove individual upcoming slots. V
 
 Sign in as a customer and select **Boka** on a published listing to confirm a time immediately. Confirmed bookings are shown under **Mitt konto** for the customer and the provider who owns the listing.
 
+Customers can cancel their own bookings before the start time. Cancelled bookings remain visible on both accounts, and the time can be booked again.
+
 ### Account confirmation
 
 Run the database update before trying registration. In development, open **Mitt konto** in the browser, register, and use the confirmation link printed in the API terminal. The default link uses `http://localhost:5173`. If Vite uses another origin, set `Accounts__PublicOrigin` to that origin before starting the API.
