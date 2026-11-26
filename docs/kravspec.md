@@ -13,6 +13,7 @@ SkillConnect är en marknadsplats för tjänster. En utförare publicerar en tj�
 | K5 | Tjänstens detaljsida visar kommande lediga tider. Kunden kan välja och boka en tid på en publicerad tjänst. |
 | K6 | En lyckad bokning bekräftas direkt och tiden försvinner från listan över lediga tider. En tid kan bara bokas en gång, även vid samtidiga försök. |
 | K7 | Kunden kan se sina egna bekräftade bokningar. Utföraren kan se bokningar för sina egna tjänster. |
+| K8 | Kunden kan avboka en egen bokning fram till starttiden. Bokningen visas som avbokad för kunden och utföraren, och tiden kan bokas på nytt. |
 
 ## Acceptanskriterier
 
@@ -23,7 +24,7 @@ SkillConnect är en marknadsplats för tjänster. En utförare publicerar en tj�
 
 ## Öppna beslut och avgränsningar
 
-- Regler för avbokning, ombokning och överlappande tider mellan en utförares tjänster behöver beslutas innan de implementeras.
+- Regler för utföraravbokning, ombokning och överlappande tider mellan en utförares tjänster behöver beslutas innan de implementeras.
 - Betalning, chatt, recensioner, återkommande tider, tvåstegsverifiering och återställning av glömt lösenord ligger utanför första versionen.
 
 ## Teknik

@@ -197,6 +197,45 @@ public sealed class ProviderServiceEndpointTests
         Assert.Equal(booking, Assert.Single((await owner.GetFromJsonAsync<BookingSummary[]>("/api/provider/bookings"))!));
         Assert.Empty((await otherCustomer.GetFromJsonAsync<BookingSummary[]>("/api/accounts/bookings"))!);
         Assert.Empty((await otherProvider.GetFromJsonAsync<BookingSummary[]>("/api/provider/bookings"))!);
+
+        var cancellationPath = $"/api/accounts/bookings/{booking.Id}/cancellation";
+        Assert.Equal(HttpStatusCode.Unauthorized, (await visitor.PutAsync(cancellationPath, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await owner.PutAsync(cancellationPath, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await otherCustomer.PutAsync(cancellationPath, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await customer.PutAsync(cancellationPath, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await customer.PutAsync(cancellationPath, null)).StatusCode);
+        Assert.Equal(time, Assert.Single((await visitor.GetFromJsonAsync<AvailableTime[]>(publicAvailabilityPath))!));
+
+        using var rebooked = await otherCustomer.PostAsJsonAsync(bookingPath, new { });
+        Assert.Equal(HttpStatusCode.Created, rebooked.StatusCode);
+        var replacement = await rebooked.Content.ReadFromJsonAsync<BookingSummary>();
+        Assert.NotNull(replacement);
+        Assert.NotEqual(booking.Id, replacement.Id);
+        Assert.False(replacement.IsCancelled);
+        Assert.True(Assert.Single((await customer.GetFromJsonAsync<BookingSummary[]>("/api/accounts/bookings"))!).IsCancelled);
+        var ownerBookings = (await owner.GetFromJsonAsync<BookingSummary[]>("/api/provider/bookings"))!;
+        Assert.Equal(2, ownerBookings.Length);
+        Assert.Single(ownerBookings, entry => entry.IsCancelled);
+        Assert.Single(ownerBookings, entry => !entry.IsCancelled);
+
+        var replacementCancellation = $"/api/accounts/bookings/{replacement.Id}/cancellation";
+        Assert.Equal(HttpStatusCode.NoContent, (await otherCustomer.PutAsync(replacementCancellation, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"{availabilityPath}/{time.Id}")).StatusCode);
+        Assert.Empty((await visitor.GetFromJsonAsync<AvailableTime[]>(publicAvailabilityPath))!);
+        Assert.Equal(HttpStatusCode.Conflict, (await customer.PostAsJsonAsync(bookingPath, new { })).StatusCode);
+        Assert.Equal(2, (await owner.GetFromJsonAsync<BookingSummary[]>("/api/provider/bookings"))!.Count(entry => entry.IsCancelled));
+
+        using var anotherTimeResponse = await owner.PostAsJsonAsync(availabilityPath,
+            new { startsAt, endsAt = startsAt.AddHours(1) });
+        var anotherTime = await anotherTimeResponse.Content.ReadFromJsonAsync<AvailableTime>();
+        Assert.NotNull(anotherTime);
+        using var anotherBookingResponse = await customer.PostAsJsonAsync(
+            $"{publicAvailabilityPath}/{anotherTime.Id}/booking", new { });
+        var anotherBooking = await anotherBookingResponse.Content.ReadFromJsonAsync<BookingSummary>();
+        Assert.NotNull(anotherBooking);
+        factory.Clock.UtcNow = startsAt;
+        Assert.Equal(HttpStatusCode.Conflict, (await customer.PutAsync(
+            $"/api/accounts/bookings/{anotherBooking.Id}/cancellation", null)).StatusCode);
     }
 
     private static async Task<Guid> SignInAsync(TestFactory factory, HttpClient client, string email, AccountRole role)

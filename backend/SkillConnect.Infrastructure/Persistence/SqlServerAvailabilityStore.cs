@@ -1,4 +1,3 @@
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using SkillConnect.Application.Services;
 using SkillConnect.Domain.Services;
@@ -18,8 +17,8 @@ public sealed class SqlServerAvailabilityStore(SkillConnectDbContext dbContext) 
         Guid serviceId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         return await dbContext.AvailabilitySlots.AsNoTracking()
-            .Where(slot => slot.ServiceId == serviceId && slot.StartsAt > now &&
-                !dbContext.Bookings.Any(booking => booking.SlotId == slot.Id))
+            .Where(slot => slot.ServiceId == serviceId && slot.StartsAt > now && !slot.IsWithdrawn &&
+                !dbContext.Bookings.Any(booking => booking.SlotId == slot.Id && !booking.IsCancelled))
             .OrderBy(slot => slot.StartsAt)
             .ThenBy(slot => slot.Id)
             .ToListAsync(cancellationToken);
@@ -35,24 +34,20 @@ public sealed class SqlServerAvailabilityStore(SkillConnectDbContext dbContext) 
         Guid serviceId, Guid slotId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var slot = await dbContext.AvailabilitySlots.SingleOrDefaultAsync(
-            slot => slot.Id == slotId && slot.ServiceId == serviceId && slot.StartsAt > now &&
-                !dbContext.Bookings.Any(booking => booking.SlotId == slot.Id), cancellationToken);
+            slot => slot.Id == slotId && slot.ServiceId == serviceId && slot.StartsAt > now && !slot.IsWithdrawn &&
+                !dbContext.Bookings.Any(booking => booking.SlotId == slot.Id && !booking.IsCancelled), cancellationToken);
         if (slot is null)
         {
             return false;
         }
 
-        dbContext.AvailabilitySlots.Remove(slot);
+        slot.Withdraw();
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
             return true;
         }
         catch (DbUpdateConcurrencyException)
-        {
-            return false;
-        }
-        catch (DbUpdateException exception) when (exception.InnerException is SqlException { Number: 547 })
         {
             return false;
         }

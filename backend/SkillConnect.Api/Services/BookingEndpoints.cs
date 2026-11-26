@@ -18,6 +18,8 @@ public static class BookingEndpoints
         app.MapPost("/api/services/{serviceId:guid}/availability/{slotId:guid}/booking", BookAsync)
             .RequireAuthorization(CustomerPolicy);
         app.MapGet("/api/accounts/bookings", ListForCustomerAsync).RequireAuthorization(CustomerPolicy);
+        app.MapPut("/api/accounts/bookings/{bookingId:guid}/cancellation", CancelAsync)
+            .RequireAuthorization(CustomerPolicy);
         app.MapGet("/api/provider/bookings", ListForProviderAsync).RequireAuthorization(ProviderPolicy);
     }
 
@@ -38,6 +40,18 @@ public static class BookingEndpoints
     private static async Task<IResult> ListForCustomerAsync(
         ClaimsPrincipal user, ManageBookings bookings, CancellationToken cancellationToken) =>
         Results.Ok(await bookings.ListForCustomerAsync(GetAccountId(user), cancellationToken));
+
+    private static async Task<IResult> CancelAsync(Guid bookingId, ClaimsPrincipal user, ManageBookings bookings,
+        CancellationToken cancellationToken)
+    {
+        var result = await bookings.CancelAsync(bookingId, GetAccountId(user), cancellationToken);
+        return result switch
+        {
+            BookingCancellation.Cancelled => Results.NoContent(),
+            BookingCancellation.Started => Results.Conflict(new { message = "The booking has already started." }),
+            _ => Results.NotFound(),
+        };
+    }
 
     private static async Task<IResult> ListForProviderAsync(
         ClaimsPrincipal user, ManageBookings bookings, CancellationToken cancellationToken) =>

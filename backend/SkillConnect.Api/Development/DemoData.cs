@@ -44,11 +44,12 @@ internal static class DemoData
         listing.Publish();
 
         var now = TimeProvider.System.GetUtcNow();
-        var upcoming = await db.AvailabilitySlots.Where(slot => slot.ServiceId == listing.Id && slot.StartsAt > now)
+        var upcoming = await db.AvailabilitySlots
+            .Where(slot => slot.ServiceId == listing.Id && slot.StartsAt > now && !slot.IsWithdrawn)
             .Select(slot => new
             {
                 slot.EndsAt,
-                IsBooked = db.Bookings.Any(booking => booking.SlotId == slot.Id),
+                IsBooked = db.Bookings.Any(booking => booking.SlotId == slot.Id && !booking.IsCancelled),
             }).ToListAsync();
         var firstStart = new DateTimeOffset(now.UtcDateTime.Date.AddDays(1).AddHours(9), TimeSpan.Zero);
         if (upcoming.Count > 0)

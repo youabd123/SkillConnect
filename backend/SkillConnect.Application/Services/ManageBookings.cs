@@ -13,4 +13,7 @@ public sealed class ManageBookings(IBookingStore store, TimeProvider clock)
     public Task<IReadOnlyList<BookingSummary>> ListForProviderAsync(
         Guid providerId, CancellationToken cancellationToken) =>
         store.ListForProviderAsync(providerId, cancellationToken);
+
+    public Task<BookingCancellation> CancelAsync(Guid bookingId, Guid customerId, CancellationToken cancellationToken) =>
+        store.CancelAsync(bookingId, customerId, clock.GetUtcNow(), cancellationToken);
 }
