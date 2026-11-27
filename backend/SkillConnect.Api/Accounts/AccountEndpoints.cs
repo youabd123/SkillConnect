@@ -167,6 +167,7 @@ public static class AccountEndpoints
             email = user.Email,
             role = user.AccountRole == AccountRole.Provider ? "provider" : "customer",
             businessName = user.AccountRole == AccountRole.Provider ? user.BusinessName : null,
+            businessDescription = user.AccountRole == AccountRole.Provider ? user.BusinessDescription : null,
         });
     }
 
@@ -174,9 +175,14 @@ public static class AccountEndpoints
         ProviderProfileRequest request, HttpContext context, UserManager<SkillConnectUser> users)
     {
         var businessName = request.BusinessName?.Trim();
+        var businessDescription = request.BusinessDescription?.Trim();
         if (businessName is not { Length: > 0 and <= 120 })
         {
             return Results.BadRequest(new { message = "Enter a business name of up to 120 characters." });
+        }
+        if (businessDescription is { Length: > 1000 })
+        {
+            return Results.BadRequest(new { message = "Enter a business description of up to 1000 characters." });
         }
 
         var user = await users.GetUserAsync(context.User);
@@ -186,9 +192,13 @@ public static class AccountEndpoints
         }
 
         user.BusinessName = businessName;
+        if (businessDescription is not null)
+        {
+            user.BusinessDescription = businessDescription.Length == 0 ? null : businessDescription;
+        }
         var result = await users.UpdateAsync(user);
         return result.Succeeded
-            ? Results.Ok(new { businessName })
+            ? Results.Ok(new { businessName, businessDescription = user.BusinessDescription })
             : Results.Conflict(new { message = "The provider profile could not be saved. Try again." });
     }
 
@@ -210,5 +220,5 @@ public static class AccountEndpoints
     private sealed record EmailRequest(string? Email);
     private sealed record ConfirmEmailRequest(Guid UserId, string? Code);
     private sealed record LoginRequest(string? Email, string? Password);
-    private sealed record ProviderProfileRequest(string? BusinessName);
+    private sealed record ProviderProfileRequest(string? BusinessName, string? BusinessDescription);
 }

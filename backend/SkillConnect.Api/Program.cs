@@ -12,6 +12,7 @@ builder.Services.AddDbContext<SkillConnectDbContext>(options =>
 builder.Services.AddScoped<IServiceCatalogReader, SqlServerServiceCatalogReader>();
 builder.Services.AddScoped<ListPublishedServices>();
 builder.Services.AddScoped<GetPublishedService>();
+builder.Services.AddScoped<GetProviderProfile>();
 builder.Services.AddSkillConnectAccounts(builder.Environment);
 builder.Services.AddProviderServices();
 builder.Services.AddServiceAvailability();
@@ -33,6 +34,12 @@ app.MapSkillConnectAccounts();
 app.MapProviderServices();
 app.MapPublicAvailability();
 app.MapServiceBookings();
+app.MapGet("/api/providers/{id:guid}", async (
+    Guid id, GetProviderProfile getProfile, CancellationToken cancellationToken) =>
+{
+    var profile = await getProfile.ExecuteAsync(id, cancellationToken);
+    return profile is null ? Results.NotFound() : Results.Ok(profile);
+});
 app.MapGet("/api/services", async (
     string? category,
     ListPublishedServices listServices,

@@ -82,6 +82,9 @@ public sealed class ServiceCatalogEndpointTests
         public ServiceListing PublishedListing => listings[0];
         public ServiceListing DraftListing => listings[2];
 
+        public Task<PublicProviderProfile?> FindProviderAsync(Guid id, DateTimeOffset now, CancellationToken cancellationToken) =>
+            Task.FromResult<PublicProviderProfile?>(null);
+
         public Task<ServiceDetails?> FindPublishedAsync(Guid id, CancellationToken cancellationToken)
         {
             var listing = listings.SingleOrDefault(listing => listing.Id == id && listing.IsPublished);

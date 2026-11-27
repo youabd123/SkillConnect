@@ -11,4 +11,4 @@ public sealed class ListPublishedServices(IServiceCatalogReader catalogReader, T
     }
 }
 
-public sealed record ServiceSummary(Guid Id, string Name, string Category, DateTimeOffset? NextAvailableAt, string? BusinessName);
+public sealed record ServiceSummary(Guid Id, string Name, string Category, DateTimeOffset? NextAvailableAt, string? BusinessName, Guid? ProviderId = null);

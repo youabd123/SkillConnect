@@ -250,8 +250,11 @@ public sealed class ProviderServiceEndpointTests
         using var visitor = factory.CreateAccountClient();
         using var customer = factory.CreateAccountClient();
         using var provider = factory.CreateAccountClient();
-        await SignInAsync(factory, customer, "customer@example.test", AccountRole.Customer);
-        await SignInAsync(factory, provider, "private-provider@example.test", AccountRole.Provider);
+        var customerId = await SignInAsync(factory, customer, "customer@example.test", AccountRole.Customer);
+        var providerId = await SignInAsync(factory, provider, "private-provider@example.test", AccountRole.Provider);
+        var publicProfilePath = $"/api/providers/{providerId}";
+        Assert.Equal(HttpStatusCode.NotFound, (await visitor.GetAsync(publicProfilePath)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await visitor.GetAsync($"/api/providers/{customerId}")).StatusCode);
 
         using var response = await provider.PostAsJsonAsync(ServicesPath,
             new { name = "Garden care", description = "Seasonal care", category = "Gardening" });
@@ -259,15 +262,22 @@ public sealed class ProviderServiceEndpointTests
         Assert.NotNull(service);
         Assert.Equal(HttpStatusCode.OK, (await provider.PutAsync($"{ServicesPath}/{service.Id}/publication", null)).StatusCode);
         Assert.Null(Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).BusinessName);
+        Assert.Equal(HttpStatusCode.Created, (await provider.PostAsJsonAsync(ServicesPath,
+            new { name = "Private draft", description = "Draft", category = "Gardening" })).StatusCode);
 
         const string profilePath = "/api/provider/profile";
-        var profile = new { businessName = "  Gröna Gården  " };
+        var profile = new { businessName = "  Gröna Gården  ", businessDescription = "  Trädgårdshjälp året runt.  " };
         Assert.Equal(HttpStatusCode.Unauthorized, (await visitor.PutAsJsonAsync(profilePath, profile)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await customer.PutAsJsonAsync(profilePath, profile)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await provider.PutAsJsonAsync(profilePath, new { businessName = " " })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await provider.PutAsJsonAsync(profilePath, profile)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await provider.PutAsJsonAsync(profilePath, new { profile.businessName })).StatusCode);
         Assert.Equal("Gröna Gården", (await provider.GetFromJsonAsync<BusinessProfile>("/api/accounts/me"))?.BusinessName);
         Assert.Equal("Gröna Gården", Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).BusinessName);
+        var publicProfile = await visitor.GetFromJsonAsync<PublicProviderProfile>(publicProfilePath);
+        Assert.NotNull(publicProfile);
+        Assert.Equal("Trädgårdshjälp året runt.", publicProfile.BusinessDescription);
+        Assert.Equal(service.Id, Assert.Single(publicProfile.Services).Id);
 
         var rawDetails = await visitor.GetStringAsync($"/api/services/{service.Id}");
         Assert.Equal("Gröna Gården", System.Text.Json.JsonSerializer.Deserialize<ServiceDetails>(
