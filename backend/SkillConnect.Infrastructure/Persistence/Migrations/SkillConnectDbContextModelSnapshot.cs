@@ -219,6 +219,13 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("DeliveryMode")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -235,7 +242,10 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ServiceListings");
+                    b.ToTable("ServiceListings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ServiceListings_Delivery", "([DeliveryMode] IS NULL AND [City] IS NULL) OR ([DeliveryMode] IS NOT NULL AND (([DeliveryMode] IN (1, 3) AND [City] IS NOT NULL) OR ([DeliveryMode] = 2 AND [City] IS NULL)))");
+                        });
                 });
 
             modelBuilder.Entity("SkillConnect.Infrastructure.Identity.SkillConnectUser", b =>

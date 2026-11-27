@@ -24,7 +24,12 @@ public sealed class SkillConnectDbContext(DbContextOptions<SkillConnectDbContext
         modelBuilder.Entity<SkillConnectUser>().Property(user => user.BusinessDescription).HasMaxLength(1000);
 
         var listing = modelBuilder.Entity<ServiceListing>();
+        listing.ToTable("ServiceListings", table => table.HasCheckConstraint("CK_ServiceListings_Delivery",
+            "([DeliveryMode] IS NULL AND [City] IS NULL) OR " +
+            "([DeliveryMode] IS NOT NULL AND (([DeliveryMode] IN (1, 3) AND [City] IS NOT NULL) OR " +
+            "([DeliveryMode] = 2 AND [City] IS NULL)))"));
         listing.HasKey(service => service.Id);
+        listing.Property(service => service.City).HasMaxLength(100);
         listing.Property(service => service.Id).ValueGeneratedNever();
         listing.Property(service => service.ProviderId);
 
