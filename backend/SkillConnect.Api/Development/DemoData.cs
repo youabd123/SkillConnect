@@ -13,15 +13,27 @@ internal static class DemoData
     private const string ProviderEmail = "provider@skillconnect.test";
     private const string CustomerEmail = "customer@skillconnect.test";
     private const string Password = "SkillConnect-Demo123!";
-    private static readonly DemoListing[] Listings =
+    private static readonly DemoCompany[] Companies =
     [
-        new("Trädgårdsskötsel", "Hjälp med gräsklippning och lättare trädgårdsarbete.", "Trädgård"),
-        new("Datorhjälp", "Få hjälp med en långsam dator, uppdateringar eller installation av program.", "IT & teknik"),
-        new("Wi-Fi och hemnätverk", "Felsök anslutningen och få hjälp att ställa in router och trådlöst nätverk.", "IT & teknik"),
-        new("Klippning och styling", "Konsultation, klippning och enkel styling anpassad till din frisyr.", "Frisör & skönhet"),
-        new("Skäggtrimning", "Trimning och formning av skägget med råd om skötsel hemma.", "Frisör & skönhet"),
-        new("Bord för två", "Reservera ett bord för två personer på en fiktiv kvartersbistro.", "Restaurang"),
-        new("Provsmakning av säsongens meny", "Boka en provsmakning med tre små rätter från ett fiktivt restaurangkök.", "Restaurang"),
+        new(ProviderEmail, "SkillConnect Demo", "Vi hjälper till med enklare trädgårdsarbete.", "Trädgård",
+        [
+            new("Trädgårdsskötsel", "Hjälp med gräsklippning och lättare trädgårdsarbete."),
+        ]),
+        new("it@skillconnect.test", "Norrsken IT", "Vi hjälper privatpersoner med datorer och trådlösa nätverk.", "IT & teknik",
+        [
+            new("Datorhjälp", "Få hjälp med en långsam dator, uppdateringar eller installation av program."),
+            new("Wi-Fi och hemnätverk", "Felsök anslutningen och få hjälp att ställa in router och trådlöst nätverk."),
+        ]),
+        new("frisor@skillconnect.test", "Salong Linje", "En fiktiv frisörsalong för klippning, styling och skäggvård.", "Frisör & skönhet",
+        [
+            new("Klippning och styling", "Konsultation, klippning och enkel styling anpassad till din frisyr."),
+            new("Skäggtrimning", "Trimning och formning av skägget med råd om skötsel hemma."),
+        ]),
+        new("restaurang@skillconnect.test", "Bistro Rönn", "En fiktiv kvartersbistro med rätter som följer säsongen.", "Restaurang",
+        [
+            new("Bord för två", "Reservera ett bord för två personer på en fiktiv kvartersbistro."),
+            new("Provsmakning av säsongens meny", "Boka en provsmakning med tre små rätter från ett fiktivt restaurangkök."),
+        ]),
     ];
 
     public static async Task SeedAsync(WebApplication app)
@@ -40,31 +52,53 @@ internal static class DemoData
         var users = scope.ServiceProvider.GetRequiredService<UserManager<SkillConnectUser>>();
         await db.Database.MigrateAsync();
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-        var provider = await EnsureAccountAsync(users, ProviderEmail, AccountRole.Provider);
-        provider.BusinessName ??= "SkillConnect Demo";
         await EnsureAccountAsync(users, CustomerEmail, AccountRole.Customer);
+        var originalProvider = await EnsureAccountAsync(users, ProviderEmail, AccountRole.Provider, Companies[0]);
 
         var now = TimeProvider.System.GetUtcNow();
         var tomorrow = new DateTimeOffset(now.UtcDateTime.Date.AddDays(1).AddHours(9), TimeSpan.Zero);
-        for (var index = 0; index < Listings.Length; index++)
+        foreach (var company in Companies)
         {
-            var firstStart = tomorrow.AddDays(index / 3).AddHours(index % 3 * 4);
-            await EnsureListingAsync(db, provider.Id, Listings[index], now, firstStart);
+            var provider = company.Email == ProviderEmail
+                ? originalProvider
+                : await EnsureAccountAsync(users, company.Email, AccountRole.Provider, company);
+
+            for (var index = 0; index < company.Listings.Length; index++)
+            {
+                await EnsureListingAsync(db, originalProvider.Id, provider.Id, company.Category,
+                    company.Listings[index], now, tomorrow.AddHours(index * 4));
+            }
         }
 
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
-        app.Logger.LogInformation("Demo database ready for {Provider} and {Customer}.", ProviderEmail, CustomerEmail);
+        app.Logger.LogInformation("Demo database ready with {CompanyCount} providers and {Customer}.", Companies.Length, CustomerEmail);
     }
 
     private static async Task EnsureListingAsync(
-        SkillConnectDbContext db, Guid providerId, DemoListing demo, DateTimeOffset now, DateTimeOffset firstStart)
+        SkillConnectDbContext db, Guid originalProviderId, Guid providerId, string category,
+        DemoListing demo, DateTimeOffset now, DateTimeOffset firstStart)
     {
         var listing = await db.ServiceListings.FirstOrDefaultAsync(service =>
             service.ProviderId == providerId && service.Name == demo.Name);
+        if (listing is null && providerId != originalProviderId)
+        {
+            var originalId = await db.ServiceListings
+                .Where(service => service.ProviderId == originalProviderId && service.Name == demo.Name && service.Category == category)
+                .Select(service => (Guid?)service.Id)
+                .SingleOrDefaultAsync();
+            if (originalId is { } id)
+            {
+                // Keep the existing listing ID, slots, and booking history.
+                await db.ServiceListings.Where(service => service.Id == id)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(service => service.ProviderId, providerId));
+                listing = await db.ServiceListings.SingleAsync(service => service.Id == id);
+            }
+        }
+
         if (listing is null)
         {
-            listing = new ServiceListing(providerId, demo.Name, demo.Description, demo.Category);
+            listing = new ServiceListing(providerId, demo.Name, demo.Description, category);
             db.ServiceListings.Add(listing);
         }
         listing.Publish();
@@ -92,10 +126,13 @@ internal static class DemoData
         }
     }
 
-    private sealed record DemoListing(string Name, string Description, string Category);
+    private sealed record DemoCompany(
+        string Email, string Name, string Description, string Category, DemoListing[] Listings);
+
+    private sealed record DemoListing(string Name, string Description);
 
     private static async Task<SkillConnectUser> EnsureAccountAsync(
-        UserManager<SkillConnectUser> users, string email, AccountRole role)
+        UserManager<SkillConnectUser> users, string email, AccountRole role, DemoCompany? company = null)
     {
         var existing = await users.FindByEmailAsync(email);
         if (existing is not null)
@@ -104,6 +141,7 @@ internal static class DemoData
             {
                 throw new InvalidOperationException($"Existing account {email} does not match the demo account.");
             }
+            existing.BusinessName ??= company?.Name;
             return existing;
         }
 
@@ -114,6 +152,8 @@ internal static class DemoData
             UserName = email,
             EmailConfirmed = true,
             AccountRole = role,
+            BusinessName = company?.Name,
+            BusinessDescription = company?.Description,
         };
         var result = await users.CreateAsync(user, Password);
         if (!result.Succeeded)

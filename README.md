@@ -17,10 +17,13 @@ In a second terminal, run `cd frontend`, `npm ci` and `npm run dev`. Open [local
 
 | Role | Demo email |
 | --- | --- |
-| Provider | `provider@skillconnect.test` |
+| Gardening provider | `provider@skillconnect.test` |
+| Norrsken IT | `it@skillconnect.test` |
+| Salong Linje | `frisor@skillconnect.test` |
+| Bistro Rönn | `restaurang@skillconnect.test` |
 | Customer | `customer@skillconnect.test` |
 
-Both demo accounts use `SkillConnect-Demo123!` and are already confirmed. As the customer, open **Trädgårdsskötsel**, book a time and check **Mina bokningar** under **Mitt konto**. Then sign in as the provider to see the same booking under **Bokningar för mina tjänster**.
+All demo accounts use `SkillConnect-Demo123!` and are already confirmed. Open a company name from the catalog to see its profile and services. To demo booking, sign in as the customer, book **Trädgårdsskötsel** and check **Mina bokningar** under **Mitt konto**. Then sign in as the gardening provider to see the same booking under **Bokningar för mina tjänster**.
 
 ## Local development
 
