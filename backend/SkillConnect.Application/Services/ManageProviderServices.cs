@@ -5,9 +5,14 @@ namespace SkillConnect.Application.Services;
 public sealed class ManageProviderServices(IProviderServiceStore store)
 {
     public async Task<ProviderService> CreateAsync(
-        Guid providerId, string name, string description, string category, CancellationToken cancellationToken)
+        Guid providerId, string name, string description, string category, ServiceDeliveryMode? deliveryMode, string? city,
+        CancellationToken cancellationToken)
     {
         var listing = new ServiceListing(providerId, name, description, category);
+        if (deliveryMode is { } mode)
+        {
+            listing.SetDelivery(mode, city);
+        }
         await store.AddAsync(listing, cancellationToken);
         return ToProviderService(listing);
     }
@@ -19,7 +24,8 @@ public sealed class ManageProviderServices(IProviderServiceStore store)
     }
 
     public async Task<ProviderService?> UpdateAsync(
-        Guid providerId, Guid id, string name, string description, string category, CancellationToken cancellationToken)
+        Guid providerId, Guid id, string name, string description, string category, ServiceDeliveryMode? deliveryMode,
+        string? city, CancellationToken cancellationToken)
     {
         var listing = await store.FindOwnedAsync(providerId, id, cancellationToken);
         if (listing is null)
@@ -28,6 +34,10 @@ public sealed class ManageProviderServices(IProviderServiceStore store)
         }
 
         listing.UpdateDetails(name, description, category);
+        if (deliveryMode is { } mode)
+        {
+            listing.SetDelivery(mode, city);
+        }
         await store.SaveChangesAsync(cancellationToken);
         return ToProviderService(listing);
     }
@@ -46,7 +56,8 @@ public sealed class ManageProviderServices(IProviderServiceStore store)
     }
 
     private static ProviderService ToProviderService(ServiceListing listing) =>
-        new(listing.Id, listing.Name, listing.Description, listing.Category, listing.IsPublished);
+        new(listing.Id, listing.Name, listing.Description, listing.Category, listing.IsPublished, listing.DeliveryMode, listing.City);
 }
 
-public sealed record ProviderService(Guid Id, string Name, string Description, string Category, bool IsPublished);
+public sealed record ProviderService(Guid Id, string Name, string Description, string Category, bool IsPublished,
+    ServiceDeliveryMode? DeliveryMode, string? City);

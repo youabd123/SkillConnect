@@ -21,7 +21,8 @@ public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContex
                 join provider in PublicProviders on service.ProviderId equals provider.Id into providers
                 from provider in providers.DefaultIfEmpty()
                 select new ServiceDetails(service.Id, service.Name, service.Description, service.Category,
-                    provider == null ? null : provider.BusinessName, provider == null ? null : provider.Id))
+                    provider == null ? null : provider.BusinessName, provider == null ? null : provider.Id,
+                    service.DeliveryMode, service.City))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -40,19 +41,29 @@ public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContex
     }
 
     public Task<IReadOnlyList<ServiceSummary>> ListPublishedAsync(
-        string? category,
-        string? search,
+        ServiceCatalogFilter filter,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         var query = PublishedServices;
 
-        if (category is not null)
+        if (filter.Category is { } category)
         {
             query = query.Where(service => service.Category == category);
         }
 
-        return ListSummariesAsync(query, search, now, cancellationToken);
+        if (filter.City is { } city)
+        {
+            query = query.Where(service => service.City == city);
+        }
+
+        if (filter.Remote)
+        {
+            query = query.Where(service =>
+                service.DeliveryMode == ServiceDeliveryMode.Remote || service.DeliveryMode == ServiceDeliveryMode.Both);
+        }
+
+        return ListSummariesAsync(query, filter.Search, now, cancellationToken);
     }
 
     private async Task<IReadOnlyList<ServiceSummary>> ListSummariesAsync(
@@ -76,7 +87,7 @@ public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContex
                               .Select(slot => (DateTimeOffset?)slot.StartsAt)
                               .FirstOrDefault(),
                           item.Provider == null ? null : item.Provider.BusinessName,
-                          item.Provider == null ? null : item.Provider.Id))
+                          item.Provider == null ? null : item.Provider.Id, item.Service.DeliveryMode, item.Service.City))
             .ToListAsync(cancellationToken);
     }
 }

@@ -289,6 +289,41 @@ public sealed class ProviderServiceEndpointTests
         Assert.DoesNotContain("private-provider@example.test", rawDetails);
     }
 
+    [Fact]
+    public async Task CatalogFiltersByCityAndRemoteAvailability()
+    {
+        using var factory = new TestFactory();
+        using var visitor = factory.CreateAccountClient();
+        using var provider = factory.CreateAccountClient();
+        await SignInAsync(factory, provider, "provider@example.test", AccountRole.Provider);
+        var input = new { name = "Computer support", description = "Help with computers", category = "IT" };
+        Assert.Equal(HttpStatusCode.BadRequest, (await provider.PostAsJsonAsync(ServicesPath,
+            new { input.name, input.description, input.category, deliveryMode = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await provider.PostAsJsonAsync(ServicesPath,
+            new { input.name, input.description, input.category, deliveryMode = 2, city = "Göteborg" })).StatusCode);
+
+        using var created = await provider.PostAsJsonAsync(ServicesPath,
+            new { input.name, input.description, input.category, deliveryMode = 3, city = " Göteborg " });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var service = await created.Content.ReadFromJsonAsync<ProviderService>();
+        Assert.NotNull(service);
+        Assert.Equal("Göteborg", service.City);
+        Assert.Equal(HttpStatusCode.OK, (await provider.PutAsync($"{ServicesPath}/{service.Id}/publication", null)).StatusCode);
+
+        var results = await visitor.GetFromJsonAsync<ServiceSummary[]>(
+            "/api/services?city=G%C3%B6teborg&remote=true&q=Computer&category=IT");
+        Assert.Equal(service.Id, Assert.Single(results!).Id);
+        Assert.Empty((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services?city=Malm%C3%B6"))!);
+        Assert.Equal(HttpStatusCode.OK, (await provider.PutAsJsonAsync($"{ServicesPath}/{service.Id}", input)).StatusCode);
+        Assert.Equal("Göteborg", (await visitor.GetFromJsonAsync<ServiceDetails>($"/api/services/{service.Id}"))?.City);
+
+        Assert.Equal(HttpStatusCode.OK, (await provider.PutAsJsonAsync($"{ServicesPath}/{service.Id}",
+            new { input.name, input.description, input.category, deliveryMode = 2 })).StatusCode);
+        Assert.Empty((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services?city=G%C3%B6teborg"))!);
+        Assert.Equal(service.Id, Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services?remote=true"))!).Id);
+        Assert.Null((await visitor.GetFromJsonAsync<ServiceDetails>($"/api/services/{service.Id}"))?.City);
+    }
+
     private sealed record BusinessProfile(string? BusinessName);
 
     private static async Task<Guid> SignInAsync(TestFactory factory, HttpClient client, string email, AccountRole role)

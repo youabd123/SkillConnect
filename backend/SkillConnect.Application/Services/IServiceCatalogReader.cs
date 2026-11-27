@@ -7,8 +7,7 @@ public interface IServiceCatalogReader
 
     // A null category includes all published listings.
     Task<IReadOnlyList<ServiceSummary>> ListPublishedAsync(
-        string? category,
-        string? search,
+        ServiceCatalogFilter filter,
         DateTimeOffset now,
         CancellationToken cancellationToken);
 }

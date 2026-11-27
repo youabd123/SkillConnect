@@ -1,3 +1,5 @@
+using SkillConnect.Domain.Services;
+
 namespace SkillConnect.Application.Services;
 
 public sealed class GetPublishedService(IServiceCatalogReader catalogReader)
@@ -6,4 +8,5 @@ public sealed class GetPublishedService(IServiceCatalogReader catalogReader)
         catalogReader.FindPublishedAsync(id, cancellationToken);
 }
 
-public sealed record ServiceDetails(Guid Id, string Name, string Description, string Category, string? BusinessName, Guid? ProviderId = null);
+public sealed record ServiceDetails(Guid Id, string Name, string Description, string Category, string? BusinessName,
+    Guid? ProviderId = null, ServiceDeliveryMode? DeliveryMode = null, string? City = null);

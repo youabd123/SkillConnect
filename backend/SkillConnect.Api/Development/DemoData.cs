@@ -21,8 +21,8 @@ internal static class DemoData
         ]),
         new("it@skillconnect.test", "Norrsken IT", "Vi hjälper privatpersoner med datorer och trådlösa nätverk.", "IT & teknik",
         [
-            new("Datorhjälp", "Få hjälp med en långsam dator, uppdateringar eller installation av program."),
-            new("Wi-Fi och hemnätverk", "Felsök anslutningen och få hjälp att ställa in router och trådlöst nätverk."),
+            new("Datorhjälp", "Få hjälp med en långsam dator, uppdateringar eller installation av program.", ServiceDeliveryMode.Both),
+            new("Wi-Fi och hemnätverk", "Felsök anslutningen och få hjälp att ställa in router och trådlöst nätverk.", ServiceDeliveryMode.Remote, null),
         ]),
         new("frisor@skillconnect.test", "Salong Linje", "En fiktiv frisörsalong för klippning, styling och skäggvård.", "Frisör & skönhet",
         [
@@ -101,6 +101,10 @@ internal static class DemoData
             listing = new ServiceListing(providerId, demo.Name, demo.Description, category);
             db.ServiceListings.Add(listing);
         }
+        if (listing.DeliveryMode is null)
+        {
+            listing.SetDelivery(demo.DeliveryMode, demo.City);
+        }
         listing.Publish();
 
         var upcoming = await db.AvailabilitySlots
@@ -129,7 +133,8 @@ internal static class DemoData
     private sealed record DemoCompany(
         string Email, string Name, string Description, string Category, DemoListing[] Listings);
 
-    private sealed record DemoListing(string Name, string Description);
+    private sealed record DemoListing(string Name, string Description,
+        ServiceDeliveryMode DeliveryMode = ServiceDeliveryMode.OnSite, string? City = "Göteborg");
 
     private static async Task<SkillConnectUser> EnsureAccountAsync(
         UserManager<SkillConnectUser> users, string email, AccountRole role, DemoCompany? company = null)

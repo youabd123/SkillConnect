@@ -43,11 +43,18 @@ app.MapGet("/api/providers/{id:guid}", async (
 app.MapGet("/api/services", async (
     string? category,
     string? q,
+    string? city,
+    bool? remote,
     ListPublishedServices listServices,
     CancellationToken cancellationToken) =>
-    q?.Trim().Length > 120
-        ? Results.BadRequest(new { message = "Search must be at most 120 characters." })
-        : Results.Ok(await listServices.ExecuteAsync(category, q, cancellationToken)));
+{
+    if (q?.Trim().Length > 120 || city?.Trim().Length > 100)
+    {
+        return Results.BadRequest(new { message = "Search must be at most 120 characters and city at most 100." });
+    }
+
+    return Results.Ok(await listServices.ExecuteAsync(category, q, city, remote == true, cancellationToken));
+});
 
 app.MapGet("/api/services/{id:guid}", async (
     Guid id,
