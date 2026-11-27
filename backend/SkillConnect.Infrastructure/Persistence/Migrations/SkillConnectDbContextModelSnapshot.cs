@@ -250,6 +250,10 @@ namespace SkillConnect.Infrastructure.Persistence.Migrations
                     b.Property<int>("AccountRole")
                         .HasColumnType("int");
 
+                    b.Property<string>("BusinessDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("BusinessName")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");

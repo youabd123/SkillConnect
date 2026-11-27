@@ -6,6 +6,7 @@ public sealed class SkillConnectUser : IdentityUser<Guid>
 {
     public AccountRole AccountRole { get; init; }
     public string? BusinessName { get; set; }
+    public string? BusinessDescription { get; set; }
 }
 
 public enum AccountRole

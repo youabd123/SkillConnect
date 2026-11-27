@@ -21,6 +21,7 @@ public sealed class SkillConnectDbContext(DbContextOptions<SkillConnectDbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<SkillConnectUser>().Property(user => user.BusinessName).HasMaxLength(120);
+        modelBuilder.Entity<SkillConnectUser>().Property(user => user.BusinessDescription).HasMaxLength(1000);
 
         var listing = modelBuilder.Entity<ServiceListing>();
         listing.HasKey(service => service.Id);
