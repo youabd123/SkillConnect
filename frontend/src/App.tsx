@@ -4,19 +4,7 @@ import ProviderServicesPage from './ProviderServicesPage'
 import ServiceDetailsPage from './ServiceDetailsPage'
 import PublicProviderPage from './PublicProviderPage'
 import ServiceCards, { type ServiceSummary } from './ServiceCards'
-
-const categories = [
-  { name: 'IT & teknik', icon: '💻', aliases: ['IT', 'Teknik', 'IT-support', 'Webbutveckling'] },
-  { name: 'Frisör & skönhet', icon: '✂️', aliases: ['Frisör', 'Skönhet', 'Barberare'] },
-  { name: 'Restaurang', icon: '🍽️', aliases: ['Restauranger', 'Bordbokning', 'Mat & dryck'] },
-  { name: 'Hem & trädgård', icon: '🪴', aliases: ['Hemservice', 'Trädgård', 'Städning', 'Hantverk'] },
-  { name: 'Foto & event', icon: '📷', aliases: ['Foto', 'Fotograf', 'Event'] },
-  { name: 'Hälsa & träning', icon: '🏃', aliases: ['Hälsa', 'Träning', 'Massage'] },
-  { name: 'Fordon', icon: '🚗', aliases: ['Bil', 'Bilservice', 'Bilverkstad'] },
-  { name: 'Utbildning', icon: '📚', aliases: ['Kurser', 'Läxhjälp', 'Undervisning'] },
-]
-
-const categoryComparer = new Intl.Collator('sv-SE', { sensitivity: 'base' })
+import { categories, categoryComparer, findCatalogCategory } from './catalogCategories'
 
 type CatalogFilters = { category: string; query: string; city: string; remote: boolean }
 const emptyFilters: CatalogFilters = { category: '', query: '', city: '', remote: false }
@@ -52,8 +40,7 @@ function ServiceResults({ filters }: { filters: CatalogFilters }) {
         }
 
         const services: ServiceSummary[] = await response.json()
-        const matches = group ? services.filter((service) =>
-          [group.name, ...group.aliases].some((name) => categoryComparer.compare(name, service.category) === 0)) : services
+        const matches = group ? services.filter((service) => findCatalogCategory(service.category)?.key === group.key) : services
         if (!controller.signal.aborted) {
           setResult({ status: 'success', services: matches })
         }
@@ -89,6 +76,7 @@ function ServiceCatalog({ initialFilters }: { initialFilters: CatalogFilters }) 
   const [draft, setDraft] = useState(initialFilters)
   const [filters, setFilters] = useState(initialFilters)
   const categoryRow = useRef<HTMLUListElement>(null)
+  const resultsHeading = useRef<HTMLHeadingElement>(null)
 
   function applyFilters(input: CatalogFilters) {
     const next = { ...input, category: input.category.trim(), query: input.query.trim(), city: input.city.trim() }
@@ -106,6 +94,12 @@ function ServiceCatalog({ initialFilters }: { initialFilters: CatalogFilters }) 
     applyFilters(draft)
   }
 
+  function searchFromHero(event: FormEvent<HTMLFormElement>) {
+    filterServices(event)
+    resultsHeading.current?.focus({ preventScroll: true })
+    resultsHeading.current?.scrollIntoView({ block: 'start' })
+  }
+
   return (
     <main className="catalog-page">
       <nav className="category-nav" aria-label="Tjänstekategorier">
@@ -118,7 +112,7 @@ function ServiceCatalog({ initialFilters }: { initialFilters: CatalogFilters }) 
           </li>
           {categories.map((item) => (
             <li key={item.name}>
-              <button type="button" className="category-tab"
+              <button type="button" className="category-tab" data-category-tone={item.key}
                 aria-pressed={categoryComparer.compare(filters.category, item.name) === 0}
                 onClick={() => applyCategory(item.name)}>
                 <span className="category-icon" aria-hidden="true">{item.icon}</span>
@@ -138,20 +132,22 @@ function ServiceCatalog({ initialFilters }: { initialFilters: CatalogFilters }) 
         <div className="hero-copy">
           <h1 id="catalog-title">Hitta och boka tjänster.</h1>
           <p>Utforska tjänster från företag i olika branscher och boka en tid som passar dig.</p>
-          <a className="hero-link" href="#tjanster">Utforska tjänster <span aria-hidden="true">↓</span></a>
+          <form className="hero-search" onSubmit={searchFromHero} role="search" aria-label="Sök efter tjänst eller företag">
+            <label htmlFor="catalog-search">Tjänst eller företag</label>
+            <div className="hero-search-controls">
+              <input id="catalog-search" type="search" value={draft.query} maxLength={120}
+                placeholder="Till exempel Wi-Fi" onChange={(event) => setDraft({ ...draft, query: event.target.value })} />
+              <button type="submit">Sök <span aria-hidden="true">→</span></button>
+            </div>
+          </form>
         </div>
         <div className="hero-art" aria-hidden="true" />
       </section>
       <section className="catalog-section" id="tjanster" aria-labelledby="services-title">
         <div className="catalog-toolbar">
-          <h2 id="services-title">{filters.category || 'Alla tjänster'}</h2>
-          <form className="catalog-filter" onSubmit={filterServices} role="search" aria-label="Sök i tjänstekatalogen">
+          <h2 id="services-title" ref={resultsHeading} tabIndex={-1}>{filters.category || 'Alla tjänster'}</h2>
+          <form className="catalog-filter" onSubmit={filterServices} aria-label="Filtrera tjänster">
             <div className="filter">
-              <div className="catalog-search-field">
-                <label htmlFor="catalog-search">Tjänst eller företag</label>
-                <input id="catalog-search" type="search" value={draft.query} maxLength={120}
-                  placeholder="Till exempel Wi-Fi" onChange={(event) => setDraft({ ...draft, query: event.target.value })} />
-              </div>
               <div>
                 <label htmlFor="category">Kategori</label>
                 <input id="category" value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} />
@@ -165,7 +161,7 @@ function ServiceCatalog({ initialFilters }: { initialFilters: CatalogFilters }) 
                 <input type="checkbox" checked={draft.remote} onChange={(event) => setDraft({ ...draft, remote: event.target.checked })} />
                 Kan bokas på distans
               </label>
-              <button type="submit">Sök</button>
+              <button type="submit">Filtrera</button>
               {catalogSearch(filters) && <button type="button" className="secondary" onClick={() => applyFilters(emptyFilters)}>Rensa filter</button>}
             </div>
           </form>

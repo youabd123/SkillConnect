@@ -1,5 +1,6 @@
 import { formatBookingStart } from './bookingTimes'
 import { describeDelivery, type ServiceDelivery } from './serviceDelivery'
+import { findCatalogCategory } from './catalogCategories'
 
 export type ServiceSummary = ServiceDelivery & {
   id: string
@@ -18,7 +19,7 @@ export default function ServiceCards({ services, search = '', showProvider = tru
   return (
     <ul className="catalog-grid">
       {services.map((service) => (
-        <li className="catalog-card" key={service.id}>
+        <li className="catalog-card" data-category-tone={findCatalogCategory(service.category)?.key} key={service.id}>
           <p className="category-label">{service.category}</p>
           <div className="catalog-card-title">
             <h3><a className="catalog-card-link" href={`/services/${service.id}${search}`}>{service.name}</a></h3>
