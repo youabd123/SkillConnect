@@ -40,7 +40,7 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. The development server forwards `/api` requests to the API on port 5241. When serving the production frontend build, route `/api` to the backend on the same HTTPS origin and serve the frontend's `index.html` for `/services/{id}`, `/account`, `/account/services` and `/confirm-email` so direct links work.
+Open the local URL printed by Vite. The development server forwards `/api` requests to the API on port 5241. When serving the production frontend build, route `/api` to the backend on the same HTTPS origin and serve the frontend's `index.html` for `/services/{id}`, `/providers/{id}`, `/account`, `/account/services` and `/confirm-email` so direct links work.
 
 Run `npm run lint` and `npm run build` from `frontend`, or `dotnet test backend/SkillConnect.sln` from the repository root.
 
@@ -69,7 +69,7 @@ dotnet ef database update --project backend/SkillConnect.Infrastructure
 The catalog starts empty on a new database. The health endpoint runs independently of SQL Server.
 
 To add a listing, sign in as a provider and open **Mina tjänster**. Create a draft, then publish it to make it visible in the public catalog.
-Set the public business name under **Mitt konto → Företagsuppgifter**. It appears on the provider's published service cards and details pages.
+Set the public business name and an optional presentation under **Mitt konto → Företagsuppgifter**. The name links to the business profile from published service cards and details pages.
 
 Use **Hantera tider** on a listing to add or remove individual upcoming slots. Visitors see upcoming slots on the details page once the listing is published. Times are displayed in the browser's local time zone.
 

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import AccountPage, { ConfirmEmailPage } from './AccountPage'
 import ProviderServicesPage from './ProviderServicesPage'
 import ServiceDetailsPage from './ServiceDetailsPage'
-import { formatBookingStart } from './bookingTimes'
+import PublicProviderPage from './PublicProviderPage'
+import ServiceCards, { type ServiceSummary } from './ServiceCards'
 
 const categories = [
   { name: 'IT & teknik', icon: '💻', aliases: ['IT', 'Teknik', 'IT-support', 'Webbutveckling'] },
@@ -19,14 +20,6 @@ const categoryComparer = new Intl.Collator('sv-SE', { sensitivity: 'base' })
 
 function categorySearch(category: string) {
   return category ? `?${new URLSearchParams({ category })}` : ''
-}
-
-type ServiceSummary = {
-  id: string
-  name: string
-  category: string
-  nextAvailableAt: string | null
-  businessName: string | null
 }
 
 type CatalogResult =
@@ -78,28 +71,7 @@ function ServiceResults({ category }: { category: string }) {
     return <p className="catalog-message" role="status">{category ? 'Inga tjänster i den kategorin.' : 'Inga publicerade tjänster ännu.'}</p>
   }
 
-  return (
-    <ul className="catalog-grid">
-      {result.services.map((service) => (
-        <li key={service.id}>
-          <a className="catalog-card" href={`/services/${service.id}${categorySearch(category)}`}>
-            <p className="category-label">{service.category}</p>
-            <div className="catalog-card-title">
-              <h3>{service.name}</h3>
-              {service.businessName && <p className="business-name">{service.businessName}</p>}
-            </div>
-            {service.nextAvailableAt ? (
-              <p className="card-availability">
-                <span>Nästa lediga tid</span>
-                <time dateTime={service.nextAvailableAt}>{formatBookingStart(service.nextAvailableAt)}</time>
-              </p>
-            ) : <p className="card-availability">Inga lediga tider just nu</p>}
-            <span className="card-arrow" aria-hidden="true">↗</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  )
+  return <ServiceCards services={result.services} search={categorySearch(category)} />
 }
 
 function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
@@ -177,6 +149,8 @@ function CurrentPage() {
   if (window.location.pathname === '/account') return <AccountPage />
   if (window.location.pathname === '/account/services') return <ProviderServicesPage />
   if (window.location.pathname === '/confirm-email') return <ConfirmEmailPage />
+  const providerId = /^\/providers\/([^/]+)\/?$/.exec(window.location.pathname)?.[1]
+  if (providerId) return <PublicProviderPage id={providerId} />
 
   const category = new URLSearchParams(window.location.search).get('category')?.trim() ?? ''
   const serviceId = /^\/services\/([^/]+)\/?$/.exec(window.location.pathname)?.[1]

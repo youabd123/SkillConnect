@@ -1,11 +1,15 @@
 import { useState, type FormEvent } from 'react'
 
-export default function ProviderBusinessNameForm({ initialName }: { initialName: string | null }) {
+export default function ProviderProfileForm({ initialName, initialDescription }: {
+  initialName: string | null
+  initialDescription: string | null
+}) {
   const [name, setName] = useState(initialName ?? '')
+  const [description, setDescription] = useState(initialDescription ?? '')
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState<{ error: boolean; text: string } | null>(null)
 
-  async function saveName(event: FormEvent<HTMLFormElement>) {
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const businessName = name.trim()
     if (!businessName) {
@@ -19,15 +23,16 @@ export default function ProviderBusinessNameForm({ initialName }: { initialName:
       const response = await fetch('/api/provider/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessName }),
+        body: JSON.stringify({ businessName, businessDescription: description }),
       })
       if (!response.ok) throw new Error('Business name update failed')
 
-      const saved: { businessName: string } = await response.json()
+      const saved: { businessName: string; businessDescription: string | null } = await response.json()
       setName(saved.businessName)
-      setNotice({ error: false, text: 'Företagsnamnet är sparat.' })
+      setDescription(saved.businessDescription ?? '')
+      setNotice({ error: false, text: 'Företagsprofilen är sparad.' })
     } catch {
-      setNotice({ error: true, text: 'Företagsnamnet kunde inte sparas. Försök igen.' })
+      setNotice({ error: true, text: 'Företagsprofilen kunde inte sparas. Försök igen.' })
     } finally {
       setPending(false)
     }
@@ -36,12 +41,15 @@ export default function ProviderBusinessNameForm({ initialName }: { initialName:
   return (
     <section className="provider-profile" aria-labelledby="provider-profile-heading">
       <h2 id="provider-profile-heading">Företagsuppgifter</h2>
-      <form className="account-form" onSubmit={saveName}>
+      <form className="account-form" onSubmit={saveProfile}>
         <label htmlFor="business-name">Företagsnamn</label>
         <input id="business-name" autoComplete="organization" required maxLength={120} disabled={pending}
           aria-describedby="business-name-hint" value={name} onChange={(event) => setName(event.target.value)} />
         <p id="business-name-hint">Namnet visas på dina publicerade tjänster.</p>
-        <button type="submit" disabled={pending}>Spara företagsnamn</button>
+        <label htmlFor="business-description">Kort presentation (valfritt)</label>
+        <textarea id="business-description" rows={4} maxLength={1000} disabled={pending}
+          value={description} onChange={(event) => setDescription(event.target.value)} />
+        <button type="submit" disabled={pending}>Spara företagsprofil</button>
         {notice && <p role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
       </form>
     </section>
