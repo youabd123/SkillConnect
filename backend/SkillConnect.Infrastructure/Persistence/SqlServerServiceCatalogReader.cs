@@ -35,12 +35,13 @@ public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContex
             return null;
         }
 
-        var services = await ListSummariesAsync(PublishedServices.Where(service => service.ProviderId == id), now, cancellationToken);
+        var services = await ListSummariesAsync(PublishedServices.Where(service => service.ProviderId == id), null, now, cancellationToken);
         return new PublicProviderProfile(id, provider.BusinessName!, provider.BusinessDescription, services);
     }
 
     public Task<IReadOnlyList<ServiceSummary>> ListPublishedAsync(
         string? category,
+        string? search,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
@@ -51,23 +52,31 @@ public sealed class SqlServerServiceCatalogReader(SkillConnectDbContext dbContex
             query = query.Where(service => service.Category == category);
         }
 
-        return ListSummariesAsync(query, now, cancellationToken);
+        return ListSummariesAsync(query, search, now, cancellationToken);
     }
 
     private async Task<IReadOnlyList<ServiceSummary>> ListSummariesAsync(
-        IQueryable<ServiceListing> services, DateTimeOffset now, CancellationToken cancellationToken)
+        IQueryable<ServiceListing> services, string? search, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var availableSlots = dbContext.GetUpcomingAvailableSlots(now);
-        return await (from service in services
-                      join provider in PublicProviders on service.ProviderId equals provider.Id into providers
-                      from provider in providers.DefaultIfEmpty()
-                      orderby service.Name, service.Id
-                      select new ServiceSummary(service.Id, service.Name, service.Category,
-                          availableSlots.Where(slot => slot.ServiceId == service.Id)
+        var listings = from service in services
+                       join provider in PublicProviders on service.ProviderId equals provider.Id into providers
+                       from provider in providers.DefaultIfEmpty()
+                       select new { Service = service, Provider = provider };
+        if (search is not null)
+        {
+            listings = listings.Where(item => item.Service.Name.Contains(search) ||
+                (item.Provider != null && item.Provider.BusinessName!.Contains(search)));
+        }
+
+        return await listings.OrderBy(item => item.Service.Name).ThenBy(item => item.Service.Id)
+            .Select(item => new ServiceSummary(item.Service.Id, item.Service.Name, item.Service.Category,
+                          availableSlots.Where(slot => slot.ServiceId == item.Service.Id)
                               .OrderBy(slot => slot.StartsAt)
                               .Select(slot => (DateTimeOffset?)slot.StartsAt)
                               .FirstOrDefault(),
-                          provider == null ? null : provider.BusinessName, provider == null ? null : provider.Id))
+                          item.Provider == null ? null : item.Provider.BusinessName,
+                          item.Provider == null ? null : item.Provider.Id))
             .ToListAsync(cancellationToken);
     }
 }

@@ -95,11 +95,13 @@ public sealed class ServiceCatalogEndpointTests
 
         public Task<IReadOnlyList<ServiceSummary>> ListPublishedAsync(
             string? category,
+            string? search,
             DateTimeOffset now,
             CancellationToken cancellationToken)
         {
             IReadOnlyList<ServiceSummary> results = listings
-                .Where(listing => listing.IsPublished && (category is null || listing.Category == category))
+                .Where(listing => listing.IsPublished && (category is null || listing.Category == category) &&
+                    (search is null || listing.Name.Contains(search)))
                 .Select(listing => new ServiceSummary(listing.Id, listing.Name, listing.Category, null, null))
                 .ToArray();
 

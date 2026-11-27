@@ -42,9 +42,12 @@ app.MapGet("/api/providers/{id:guid}", async (
 });
 app.MapGet("/api/services", async (
     string? category,
+    string? q,
     ListPublishedServices listServices,
     CancellationToken cancellationToken) =>
-    Results.Ok(await listServices.ExecuteAsync(category, cancellationToken)));
+    q?.Trim().Length > 120
+        ? Results.BadRequest(new { message = "Search must be at most 120 characters." })
+        : Results.Ok(await listServices.ExecuteAsync(category, q, cancellationToken)));
 
 app.MapGet("/api/services/{id:guid}", async (
     Guid id,

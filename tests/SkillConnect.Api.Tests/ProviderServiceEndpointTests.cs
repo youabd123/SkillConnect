@@ -274,6 +274,10 @@ public sealed class ProviderServiceEndpointTests
         Assert.Equal(HttpStatusCode.OK, (await provider.PutAsJsonAsync(profilePath, new { profile.businessName })).StatusCode);
         Assert.Equal("Gröna Gården", (await provider.GetFromJsonAsync<BusinessProfile>("/api/accounts/me"))?.BusinessName);
         Assert.Equal("Gröna Gården", Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services"))!).BusinessName);
+        Assert.Equal(service.Id, Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services?q=%20Garden%20"))!).Id);
+        Assert.Equal(service.Id, Assert.Single((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services?q=Gr%C3%B6na&category=Gardening"))!).Id);
+        Assert.Empty((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services?q=Gr%C3%B6na&category=Cleaning"))!);
+        Assert.Empty((await visitor.GetFromJsonAsync<ServiceSummary[]>("/api/services?q=Private%20draft"))!);
         var publicProfile = await visitor.GetFromJsonAsync<PublicProviderProfile>(publicProfilePath);
         Assert.NotNull(publicProfile);
         Assert.Equal("Trädgårdshjälp året runt.", publicProfile.BusinessDescription);
