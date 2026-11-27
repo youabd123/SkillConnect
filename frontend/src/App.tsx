@@ -18,10 +18,15 @@ const categories = [
 
 const categoryComparer = new Intl.Collator('sv-SE', { sensitivity: 'base' })
 
-function catalogSearch(category: string, query: string) {
+type CatalogFilters = { category: string; query: string; city: string; remote: boolean }
+const emptyFilters: CatalogFilters = { category: '', query: '', city: '', remote: false }
+
+function catalogSearch({ category, query, city, remote }: CatalogFilters) {
   const params = new URLSearchParams()
   if (category) params.set('category', category)
   if (query) params.set('q', query)
+  if (city) params.set('city', city)
+  if (remote) params.set('remote', 'true')
   return params.size ? `?${params}` : ''
 }
 
@@ -30,13 +35,14 @@ type CatalogResult =
   | { status: 'success'; services: ServiceSummary[] }
   | { status: 'error' }
 
-function ServiceResults({ category, query }: { category: string; query: string }) {
+function ServiceResults({ filters }: { filters: CatalogFilters }) {
   const [result, setResult] = useState<CatalogResult>({ status: 'loading' })
+  const { category, query, city, remote } = filters
 
   useEffect(() => {
     const controller = new AbortController()
     const group = categories.find((item) => categoryComparer.compare(item.name, category) === 0)
-    const search = catalogSearch(group ? '' : category, query)
+    const search = catalogSearch({ category: group ? '' : category, query, city, remote })
 
     async function loadServices() {
       try {
@@ -60,7 +66,7 @@ function ServiceResults({ category, query }: { category: string; query: string }
 
     void loadServices()
     return () => controller.abort()
-  }, [category, query])
+  }, [category, query, city, remote])
 
   if (result.status === 'loading') {
     return <p className="catalog-message" role="status">Hämtar tjänster…</p>
@@ -71,38 +77,33 @@ function ServiceResults({ category, query }: { category: string; query: string }
   }
 
   if (result.services.length === 0) {
-    const emptyMessage = query ? `Inga tjänster matchar ”${query}”.`
-      : category ? 'Inga tjänster i den kategorin.' : 'Inga publicerade tjänster ännu.'
+    const emptyMessage = category || query || city || remote
+      ? 'Inga tjänster matchar din sökning.' : 'Inga publicerade tjänster ännu.'
     return <p className="catalog-message" role="status">{emptyMessage}</p>
   }
 
-  return <ServiceCards services={result.services} search={catalogSearch(category, query)} />
+  return <ServiceCards services={result.services} search={catalogSearch(filters)} />
 }
 
-function ServiceCatalog({ initialCategory, initialQuery }: { initialCategory: string; initialQuery: string }) {
-  const [categoryInput, setCategoryInput] = useState(initialCategory)
-  const [category, setCategory] = useState(initialCategory)
-  const [searchInput, setSearchInput] = useState(initialQuery)
-  const [query, setQuery] = useState(initialQuery)
+function ServiceCatalog({ initialFilters }: { initialFilters: CatalogFilters }) {
+  const [draft, setDraft] = useState(initialFilters)
+  const [filters, setFilters] = useState(initialFilters)
   const categoryRow = useRef<HTMLUListElement>(null)
 
-  function applyFilters(categoryValue: string, searchValue: string) {
-    const category = categoryValue.trim()
-    const query = searchValue.trim()
-    setCategoryInput(category)
-    setSearchInput(query)
-    window.history.replaceState(null, '', `/${catalogSearch(category, query)}${window.location.hash}`)
-    setCategory(category)
-    setQuery(query)
+  function applyFilters(input: CatalogFilters) {
+    const next = { ...input, category: input.category.trim(), query: input.query.trim(), city: input.city.trim() }
+    setDraft(next)
+    window.history.replaceState(null, '', `/${catalogSearch(next)}${window.location.hash}`)
+    setFilters(next)
   }
 
   function applyCategory(value: string) {
-    applyFilters(value, searchInput)
+    applyFilters({ ...draft, category: value })
   }
 
   function filterServices(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    applyFilters(categoryInput, searchInput)
+    applyFilters(draft)
   }
 
   return (
@@ -110,7 +111,7 @@ function ServiceCatalog({ initialCategory, initialQuery }: { initialCategory: st
       <nav className="category-nav" aria-label="Tjänstekategorier">
         <ul className="category-row" ref={categoryRow}>
           <li>
-            <button type="button" className="category-tab" aria-pressed={!category} onClick={() => applyCategory('')}>
+            <button type="button" className="category-tab" aria-pressed={!filters.category} onClick={() => applyCategory('')}>
               <span className="category-icon category-icon-all" aria-hidden="true">⊞</span>
               Alla
             </button>
@@ -118,7 +119,7 @@ function ServiceCatalog({ initialCategory, initialQuery }: { initialCategory: st
           {categories.map((item) => (
             <li key={item.name}>
               <button type="button" className="category-tab"
-                aria-pressed={categoryComparer.compare(category, item.name) === 0}
+                aria-pressed={categoryComparer.compare(filters.category, item.name) === 0}
                 onClick={() => applyCategory(item.name)}>
                 <span className="category-icon" aria-hidden="true">{item.icon}</span>
                 {item.name}
@@ -143,25 +144,33 @@ function ServiceCatalog({ initialCategory, initialQuery }: { initialCategory: st
       </section>
       <section className="catalog-section" id="tjanster" aria-labelledby="services-title">
         <div className="catalog-toolbar">
-          <h2 id="services-title">{category || 'Alla tjänster'}</h2>
+          <h2 id="services-title">{filters.category || 'Alla tjänster'}</h2>
           <form className="catalog-filter" onSubmit={filterServices} role="search" aria-label="Sök i tjänstekatalogen">
             <div className="filter">
               <div className="catalog-search-field">
                 <label htmlFor="catalog-search">Tjänst eller företag</label>
-                <input id="catalog-search" type="search" value={searchInput} maxLength={120}
-                  placeholder="Till exempel Wi-Fi" onChange={(event) => setSearchInput(event.target.value)} />
+                <input id="catalog-search" type="search" value={draft.query} maxLength={120}
+                  placeholder="Till exempel Wi-Fi" onChange={(event) => setDraft({ ...draft, query: event.target.value })} />
               </div>
               <div>
                 <label htmlFor="category">Kategori</label>
-                <input id="category" value={categoryInput} onChange={(event) => setCategoryInput(event.target.value)} />
+                <input id="category" value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} />
               </div>
+              <div>
+                <label htmlFor="catalog-city">Ort</label>
+                <input id="catalog-city" value={draft.city} maxLength={100}
+                  placeholder="Till exempel Göteborg" onChange={(event) => setDraft({ ...draft, city: event.target.value })} />
+              </div>
+              <label className="catalog-remote">
+                <input type="checkbox" checked={draft.remote} onChange={(event) => setDraft({ ...draft, remote: event.target.checked })} />
+                Kan bokas på distans
+              </label>
               <button type="submit">Sök</button>
-              {query && <button type="button" className="secondary" onClick={() => applyFilters(category, '')}>Rensa sökning</button>}
-              {category && <button type="button" className="secondary" onClick={() => applyCategory('')}>Alla kategorier</button>}
+              {catalogSearch(filters) && <button type="button" className="secondary" onClick={() => applyFilters(emptyFilters)}>Rensa filter</button>}
             </div>
           </form>
         </div>
-        <ServiceResults key={catalogSearch(category, query)} category={category} query={query} />
+        <ServiceResults key={catalogSearch(filters)} filters={filters} />
       </section>
     </main>
   )
@@ -175,14 +184,18 @@ function CurrentPage() {
   if (providerId) return <PublicProviderPage id={providerId} />
 
   const params = new URLSearchParams(window.location.search)
-  const category = params.get('category')?.trim() ?? ''
-  const query = params.get('q')?.trim().slice(0, 120) ?? ''
-  const search = catalogSearch(category, query)
+  const filters: CatalogFilters = {
+    category: params.get('category')?.trim() ?? '',
+    query: params.get('q')?.trim().slice(0, 120) ?? '',
+    city: params.get('city')?.trim().slice(0, 100) ?? '',
+    remote: params.get('remote') === 'true',
+  }
+  const search = catalogSearch(filters)
   const serviceId = /^\/services\/([^/]+)\/?$/.exec(window.location.pathname)?.[1]
 
   return serviceId
     ? <ServiceDetailsPage id={serviceId} backHref={search ? `/${search}#tjanster` : '/'} />
-    : <ServiceCatalog initialCategory={category} initialQuery={query} />
+    : <ServiceCatalog initialFilters={filters} />
 }
 
 function App() {

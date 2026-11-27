@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import ServiceAvailability from './ServiceAvailability'
+import { deliveryModes, describeDelivery, type DeliveryMode, type ServiceDelivery } from './serviceDelivery'
 
-type Service = {
+type Service = ServiceDelivery & {
   id: string
   name: string
   description: string
@@ -18,6 +19,7 @@ const servicesUrl = '/api/provider/services'
 export default function ProviderServicesPage() {
   const [page, setPage] = useState<PageState>({ status: 'loading' })
   const [editing, setEditing] = useState<Service | null>(null)
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode | null>(null)
   const [availabilityServiceId, setAvailabilityServiceId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState<{ error: boolean; text: string } | null>(null)
@@ -46,6 +48,11 @@ export default function ProviderServicesPage() {
     return () => controller.abort()
   }, [])
 
+  function editService(service: Service | null) {
+    setEditing(service)
+    setDeliveryMode(service?.deliveryMode ?? null)
+  }
+
   async function saveService(url: string, request: RequestInit, successMessage: string) {
     setPending(true)
     setNotice(null)
@@ -56,7 +63,7 @@ export default function ProviderServicesPage() {
         return false
       }
       if (response.status === 400) {
-        setNotice({ error: true, text: 'Fyll i giltigt namn, kategori och beskrivning.' })
+        setNotice({ error: true, text: 'Kontrollera tjänstens namn, kategori, beskrivning och ort.' })
         return false
       }
       if (!response.ok) throw new Error(`Service request returned HTTP ${response.status}`)
@@ -86,6 +93,8 @@ export default function ProviderServicesPage() {
       name: String(fields.get('name') ?? '').trim(),
       description: String(fields.get('description') ?? '').trim(),
       category: String(fields.get('category') ?? '').trim(),
+      deliveryMode,
+      city: deliveryMode === deliveryModes.remote ? null : String(fields.get('city') ?? '').trim(),
     }
     const saved = await saveService(editing ? `${servicesUrl}/${editing.id}` : servicesUrl, {
       method: editing ? 'PUT' : 'POST',
@@ -94,14 +103,14 @@ export default function ProviderServicesPage() {
     }, editing ? 'Ändringarna är sparade.' : 'Utkastet är skapat.')
 
     if (saved) {
-      setEditing(null)
+      editService(null)
       form.reset()
     }
   }
 
   async function publishService(service: Service) {
     const saved = await saveService(`${servicesUrl}/${service.id}/publication`, { method: 'PUT' }, 'Tjänsten är publicerad.')
-    if (saved && editing?.id === service.id) setEditing(null)
+    if (saved && editing?.id === service.id) editService(null)
   }
 
   return (
@@ -124,9 +133,23 @@ export default function ProviderServicesPage() {
               <input id="service-category" name="category" defaultValue={editing?.category} required maxLength={80} />
               <label htmlFor="service-description">Beskrivning</label>
               <textarea id="service-description" name="description" defaultValue={editing?.description} rows={5} required maxLength={2000} />
+              <label htmlFor="service-delivery">Så utförs tjänsten</label>
+              <select id="service-delivery" required value={deliveryMode ?? ''} onChange={(event) =>
+                setDeliveryMode(Number(event.target.value) as DeliveryMode)}>
+                <option value="" disabled>Välj ett alternativ</option>
+                <option value={deliveryModes.onSite}>På plats</option>
+                <option value={deliveryModes.remote}>På distans</option>
+                <option value={deliveryModes.both}>På plats och på distans</option>
+              </select>
+              {(deliveryMode === deliveryModes.onSite || deliveryMode === deliveryModes.both) && (
+                <>
+                  <label htmlFor="service-city">Ort</label>
+                  <input id="service-city" name="city" defaultValue={editing?.city ?? ''} required maxLength={100} />
+                </>
+              )}
               <div className="service-actions">
                 <button type="submit">{editing ? 'Spara ändringar' : 'Skapa utkast'}</button>
-                {editing && <button type="button" className="secondary" onClick={() => setEditing(null)}>Avbryt redigering</button>}
+                {editing && <button type="button" className="secondary" onClick={() => editService(null)}>Avbryt redigering</button>}
               </div>
             </fieldset>
           </form>
@@ -137,10 +160,11 @@ export default function ProviderServicesPage() {
                 <li key={service.id}>
                   <h3>{service.name}</h3>
                   <p>{service.category} · {service.isPublished ? 'Publicerad' : 'Utkast'}</p>
+                  {describeDelivery(service) && <p className="service-location">{describeDelivery(service)}</p>}
                   <div className="service-actions">
                     <button type="button" className="secondary" disabled={pending} onClick={() => {
                       setNotice(null)
-                      setEditing(service)
+                      editService(service)
                     }}>Redigera</button>
                     <button type="button" className="secondary" aria-expanded={availabilityServiceId === service.id}
                       onClick={() => setAvailabilityServiceId((current) => current === service.id ? null : service.id)}>

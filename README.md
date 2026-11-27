@@ -33,7 +33,7 @@ Install the .NET 10 SDK and Node.js 24. Configure the database and apply the mig
 dotnet run --project backend/SkillConnect.Api --launch-profile http
 ```
 
-The API exposes [a health check](http://localhost:5241/health) and [the published service catalog](http://localhost:5241/api/services). The catalog accepts an optional `category` filter and a `q` search term for service and business names.
+The API exposes [a health check](http://localhost:5241/health) and [the published service catalog](http://localhost:5241/api/services). The catalog accepts `category` and `city` filters, `remote=true` for services available remotely, and a `q` search term for service and business names.
 
 Start the frontend in a separate terminal:
 
@@ -72,6 +72,7 @@ dotnet ef database update --project backend/SkillConnect.Infrastructure
 The catalog starts empty on a new database. The health endpoint runs independently of SQL Server.
 
 To add a listing, sign in as a provider and open **Mina tjänster**. Create a draft, then publish it to make it visible in the public catalog.
+Choose whether the service is on-site, remote, or both. Add a city for services offered on-site.
 Set the public business name and an optional presentation under **Mitt konto → Företagsuppgifter**. The name links to the business profile from published service cards and details pages.
 
 Use **Hantera tider** on a listing to add or remove individual upcoming slots. Visitors see upcoming slots on the details page once the listing is published. Times are displayed in the browser's local time zone.

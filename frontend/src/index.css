@@ -343,6 +343,32 @@ textarea {
   align-items: end;
 }
 
+.catalog-filter .catalog-remote {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+.catalog-filter .catalog-remote input {
+  width: 1.1rem;
+  min-height: 0;
+  height: 1.1rem;
+  accent-color: var(--forest);
+}
+
+.service-location {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.detail-copy .service-location {
+  margin-bottom: 1rem;
+}
+
 .filter .catalog-search-field input {
   width: min(17rem, 100%);
 }

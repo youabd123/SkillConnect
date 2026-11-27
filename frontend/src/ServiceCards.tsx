@@ -1,6 +1,7 @@
 import { formatBookingStart } from './bookingTimes'
+import { describeDelivery, type ServiceDelivery } from './serviceDelivery'
 
-export type ServiceSummary = {
+export type ServiceSummary = ServiceDelivery & {
   id: string
   name: string
   category: string
@@ -28,6 +29,7 @@ export default function ServiceCards({ services, search = '', showProvider = tru
                   : service.businessName}
               </p>
             )}
+            {describeDelivery(service) && <p className="service-location">{describeDelivery(service)}</p>}
           </div>
           {service.nextAvailableAt ? (
             <p className="card-availability">

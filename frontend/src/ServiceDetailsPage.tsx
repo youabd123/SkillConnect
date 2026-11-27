@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import ServiceAvailability from './ServiceAvailability'
+import { describeDelivery, type ServiceDelivery } from './serviceDelivery'
 
-type ServiceDetails = {
+type ServiceDetails = ServiceDelivery & {
   name: string
   description: string
   category: string
@@ -71,6 +72,7 @@ export default function ServiceDetailsPage({ id, backHref }: { id: string; backH
                   : result.service.businessName}
               </p>
             )}
+            {describeDelivery(result.service) && <p className="service-location">{describeDelivery(result.service)}</p>}
             <p className="service-description">{result.service.description}</p>
           </div>
           <ServiceAvailability key={id} serviceId={id} />
