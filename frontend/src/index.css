@@ -339,6 +339,14 @@ textarea {
   width: min(13rem, 100%);
 }
 
+.catalog-filter .filter {
+  align-items: end;
+}
+
+.filter .catalog-search-field input {
+  width: min(17rem, 100%);
+}
+
 button {
   border-color: var(--forest);
   background: var(--forest);
@@ -658,6 +666,15 @@ button:disabled {
   .catalog-toolbar form,
   .filter input {
     flex: 1 1 12rem;
+  }
+
+  .catalog-filter .filter > div {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .catalog-filter .filter input {
+    width: 100%;
   }
 }
 

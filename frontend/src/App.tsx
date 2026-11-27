@@ -18,8 +18,11 @@ const categories = [
 
 const categoryComparer = new Intl.Collator('sv-SE', { sensitivity: 'base' })
 
-function categorySearch(category: string) {
-  return category ? `?${new URLSearchParams({ category })}` : ''
+function catalogSearch(category: string, query: string) {
+  const params = new URLSearchParams()
+  if (category) params.set('category', category)
+  if (query) params.set('q', query)
+  return params.size ? `?${params}` : ''
 }
 
 type CatalogResult =
@@ -27,13 +30,13 @@ type CatalogResult =
   | { status: 'success'; services: ServiceSummary[] }
   | { status: 'error' }
 
-function ServiceResults({ category }: { category: string }) {
+function ServiceResults({ category, query }: { category: string; query: string }) {
   const [result, setResult] = useState<CatalogResult>({ status: 'loading' })
 
   useEffect(() => {
     const controller = new AbortController()
     const group = categories.find((item) => categoryComparer.compare(item.name, category) === 0)
-    const search = group ? '' : categorySearch(category)
+    const search = catalogSearch(group ? '' : category, query)
 
     async function loadServices() {
       try {
@@ -57,7 +60,7 @@ function ServiceResults({ category }: { category: string }) {
 
     void loadServices()
     return () => controller.abort()
-  }, [category])
+  }, [category, query])
 
   if (result.status === 'loading') {
     return <p className="catalog-message" role="status">Hämtar tjänster…</p>
@@ -68,27 +71,38 @@ function ServiceResults({ category }: { category: string }) {
   }
 
   if (result.services.length === 0) {
-    return <p className="catalog-message" role="status">{category ? 'Inga tjänster i den kategorin.' : 'Inga publicerade tjänster ännu.'}</p>
+    const emptyMessage = query ? `Inga tjänster matchar ”${query}”.`
+      : category ? 'Inga tjänster i den kategorin.' : 'Inga publicerade tjänster ännu.'
+    return <p className="catalog-message" role="status">{emptyMessage}</p>
   }
 
-  return <ServiceCards services={result.services} search={categorySearch(category)} />
+  return <ServiceCards services={result.services} search={catalogSearch(category, query)} />
 }
 
-function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
+function ServiceCatalog({ initialCategory, initialQuery }: { initialCategory: string; initialQuery: string }) {
   const [categoryInput, setCategoryInput] = useState(initialCategory)
   const [category, setCategory] = useState(initialCategory)
+  const [searchInput, setSearchInput] = useState(initialQuery)
+  const [query, setQuery] = useState(initialQuery)
   const categoryRow = useRef<HTMLUListElement>(null)
 
-  function applyCategory(value: string) {
-    const category = value.trim()
+  function applyFilters(categoryValue: string, searchValue: string) {
+    const category = categoryValue.trim()
+    const query = searchValue.trim()
     setCategoryInput(category)
-    window.history.replaceState(null, '', `/${categorySearch(category)}`)
+    setSearchInput(query)
+    window.history.replaceState(null, '', `/${catalogSearch(category, query)}${window.location.hash}`)
     setCategory(category)
+    setQuery(query)
+  }
+
+  function applyCategory(value: string) {
+    applyFilters(value, searchInput)
   }
 
   function filterServices(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    applyCategory(categoryInput)
+    applyFilters(categoryInput, searchInput)
   }
 
   return (
@@ -130,16 +144,24 @@ function ServiceCatalog({ initialCategory }: { initialCategory: string }) {
       <section className="catalog-section" id="tjanster" aria-labelledby="services-title">
         <div className="catalog-toolbar">
           <h2 id="services-title">{category || 'Alla tjänster'}</h2>
-          <form onSubmit={filterServices}>
-            <label htmlFor="category">Kategori</label>
+          <form className="catalog-filter" onSubmit={filterServices} role="search" aria-label="Sök i tjänstekatalogen">
             <div className="filter">
-              <input id="category" value={categoryInput} onChange={(event) => setCategoryInput(event.target.value)} />
-              <button type="submit">Filtrera</button>
-              {category && <button type="button" className="secondary" onClick={() => applyCategory('')}>Visa alla</button>}
+              <div className="catalog-search-field">
+                <label htmlFor="catalog-search">Tjänst eller företag</label>
+                <input id="catalog-search" type="search" value={searchInput} maxLength={120}
+                  placeholder="Till exempel Wi-Fi" onChange={(event) => setSearchInput(event.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="category">Kategori</label>
+                <input id="category" value={categoryInput} onChange={(event) => setCategoryInput(event.target.value)} />
+              </div>
+              <button type="submit">Sök</button>
+              {query && <button type="button" className="secondary" onClick={() => applyFilters(category, '')}>Rensa sökning</button>}
+              {category && <button type="button" className="secondary" onClick={() => applyCategory('')}>Alla kategorier</button>}
             </div>
           </form>
         </div>
-        <ServiceResults key={category} category={category} />
+        <ServiceResults key={catalogSearch(category, query)} category={category} query={query} />
       </section>
     </main>
   )
@@ -152,12 +174,15 @@ function CurrentPage() {
   const providerId = /^\/providers\/([^/]+)\/?$/.exec(window.location.pathname)?.[1]
   if (providerId) return <PublicProviderPage id={providerId} />
 
-  const category = new URLSearchParams(window.location.search).get('category')?.trim() ?? ''
+  const params = new URLSearchParams(window.location.search)
+  const category = params.get('category')?.trim() ?? ''
+  const query = params.get('q')?.trim().slice(0, 120) ?? ''
+  const search = catalogSearch(category, query)
   const serviceId = /^\/services\/([^/]+)\/?$/.exec(window.location.pathname)?.[1]
 
   return serviceId
-    ? <ServiceDetailsPage id={serviceId} backHref={`/${categorySearch(category)}`} />
-    : <ServiceCatalog initialCategory={category} />
+    ? <ServiceDetailsPage id={serviceId} backHref={search ? `/${search}#tjanster` : '/'} />
+    : <ServiceCatalog initialCategory={category} initialQuery={query} />
 }
 
 function App() {

@@ -33,7 +33,7 @@ Install the .NET 10 SDK and Node.js 24. Configure the database and apply the mig
 dotnet run --project backend/SkillConnect.Api --launch-profile http
 ```
 
-The API exposes [a health check](http://localhost:5241/health) and [the published service catalog](http://localhost:5241/api/services). The catalog accepts an optional `category` query parameter.
+The API exposes [a health check](http://localhost:5241/health) and [the published service catalog](http://localhost:5241/api/services). The catalog accepts an optional `category` filter and a `q` search term for service and business names.
 
 Start the frontend in a separate terminal:
 
